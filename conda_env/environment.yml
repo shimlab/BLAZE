@@ -1,0 +1,18 @@
+name: sc_demulti
+channels:
+  - bioconda
+  - default
+dependencies:
+  - python=3.7
+  - Biopython
+  - pandas
+  - pysam
+  - numpy
+  - tqdm
+  - matplotlib
+  - intervaltree
+  - scipy
+  - scikit-image
+  - pip
+  - pip:
+    - tables
