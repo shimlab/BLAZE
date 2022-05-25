@@ -85,10 +85,14 @@ class param:
 def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1, pbar = True, *arg, **kwargs):
     executor = concurrent.futures.ProcessPoolExecutor(n_process)
     if pbar:
-        pbar = tqdm(len(iterator))
+        pbar = tqdm(total=len(iterator))
     futures = [executor.submit(func, i, *arg, **kwargs) for i in iterator]
     for future in as_completed(futures):
         pbar.update(1)
     return futures
+
+
+
+
     
     

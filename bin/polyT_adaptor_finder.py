@@ -10,7 +10,8 @@ class Read(object):
     '''
     class storing all information about a read
     '''
-    def __init__(self, sequence, phred_score=None, strand = None, **kwargs):
+    def __init__(self, read_id, sequence, phred_score=None, strand = None, **kwargs):
+        self.id = read_id
         self.seq = sequence
         self.phred_score = phred_score
         self._strand = strand
@@ -25,7 +26,7 @@ class Read(object):
             self.__dict__[attr_name] = attr_val
     
     
-    def find_adaptor(self,read=None, strand=None, adaptor_seq='TCTTCCGATCT', num_nt=150, min_match_prop=0.8):
+    def find_adaptor(self,read=None, strand=None, adaptor_seq='CTTCCGATCT', num_nt=250, min_match_prop=0.8):
         '''
         find adaptor from a read
     
@@ -113,8 +114,10 @@ class Read(object):
     #     # reuse the same method of finding adaptors to find polyT
     #     return  self.find_adaptor(adaptor_seq=Ts, num_nt=num_nt, min_match_prop=0.8)
         
+    # def find_poly_T(self, read=None, strand=None, 
+    #                    poly_T_len=10, num_nt=200, min_match_prop=0.85):
     def find_poly_T(self, read=None, strand=None, 
-                       poly_T_len=10, num_nt=200, min_match_prop=0.85):
+                       poly_T_len=5, num_nt=200, min_match_prop=1):
         '''
         find adaptor from a read
     
@@ -143,7 +146,7 @@ class Read(object):
             read_code = np.array([int(x == 'T') for x in seq])
             T_prop = helper.sliding_window_mean(read_code, poly_T_len)
             wind_start_T = read_code[:-poly_T_len]
-            first_index = np.argmax(T_prop*wind_start_T > min_match_prop)
+            first_index = np.argmax(T_prop*wind_start_T >= min_match_prop)
             return {'-':first_index}
         
         if strand == '+':
@@ -198,7 +201,7 @@ class Read(object):
             apt_end_pos = np.array(apt_end_pos)
             try:
                 adp_in_t_upstream = np.array(
-                    [int(15< t_pos - x < 50) for x in apt_end_pos])
+                    [int(20< t_pos - x < 50) for x in apt_end_pos])
             except:
                 print(t_pos, apt_end_pos, self.seq, strand)
                 raise ValueError('...')
@@ -221,6 +224,7 @@ class Read(object):
             self.raw_bc_end = None
             self.strand = None
             self.raw_bc = None
+            self.raw_bc_min_q = None
             # if self.adaptor_polyT_pass == 1:
             #     print(self.seq)
             #     #print(rst_strand,rst_apt_end, rst_t_pos,adp_in_t_upstream,self.adaptor_polyT_pass)
@@ -238,7 +242,16 @@ class Read(object):
             self.raw_bc_end = rst_t_pos[0]
             self.strand = rst_strand[0]
             self.raw_bc = self.seq[self.raw_bc_start: self.raw_bc_start+16]
+            if self.phred_score is not None:
+                if strand == '+':
+                    phred_score = self.phred_score[::-1]
+                else:
+                    phred_score = self.phred_score
             
+                self.raw_bc_min_q = \
+                    min(phred_score[self.raw_bc_start: self.raw_bc_start+16])
+            else:
+                self.raw_bc_min_q = None
         
         # get poly_T_start_raw and adaptor_end_raw
     @property
