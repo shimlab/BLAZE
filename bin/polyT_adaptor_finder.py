@@ -235,10 +235,10 @@ class Read(object):
                 assert len(rst_apt_end) == 1
                 assert len(rst_t_pos) == 1
             except:
-                print(rst_strand,apt_end_pos,rst_apt_end, rst_t_pos,adp_in_t_upstream,self.adaptor_polyT_pass)
+                print(rst_strand, apt_end_pos,rst_apt_end, rst_t_pos,adp_in_t_upstream, self.adaptor_polyT_pass)
                 raise AssertionError('..')
 
-            self.raw_bc_start = apt_end_pos[0]
+            self.raw_bc_start = rst_apt_end[0]
             self.raw_bc_end = rst_t_pos[0]
             self.strand = rst_strand[0]
             self.raw_bc = self.seq[self.raw_bc_start: self.raw_bc_start+16]
@@ -247,7 +247,7 @@ class Read(object):
                     phred_score = self.phred_score[::-1]
                 else:
                     phred_score = self.phred_score
-            
+
                 self.raw_bc_min_q = \
                     min(phred_score[self.raw_bc_start: self.raw_bc_start+16])
             else:

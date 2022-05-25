@@ -35,6 +35,7 @@ import multiprocessing as mp
 import textwrap
 from pathlib import Path
 import pandas as pd
+import numpy as np
 
 
 
@@ -161,7 +162,7 @@ def get_raw_bc_from_fastq(fn, min_q=0):
     fastq = Bio.SeqIO.parse(fn, "fastq")
     for i,r in enumerate(fastq):
         read = Read(read_id = r.id, sequence=str(r.seq), 
-                    phred_score=r.letter_annotations['phred_quality'])        
+                    phred_score=r.letter_annotations['phred_quality'], fastq_name=fn)        
         read.get_strand_and_raw_bc()
         read_list.append(read)
         if read.raw_bc_min_q and read.raw_bc_min_q >= min_q:     
