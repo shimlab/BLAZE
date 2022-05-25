@@ -6,13 +6,13 @@ dependencies:
   - python=3.7
   - Biopython
   - pandas
-  - pysam
+  # - pysam
   - numpy
   - tqdm
   - matplotlib
-  - intervaltree
-  - scipy
-  - scikit-image
-  - pip
-  - pip:
-    - tables
+  # - intervaltree
+  # - scipy
+  # - scikit-image
+  # - pip
+  # - pip:
+  #   - tables
