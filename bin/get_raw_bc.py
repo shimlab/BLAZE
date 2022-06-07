@@ -95,7 +95,7 @@ def parse_arg():
     try: 
         opts, args = getopt.getopt(argv[1:],"h",
                     ["help","threads=","minQ=","full-bc-whitelist=",
-                     "out-raw-bc=", "out-bc-whitelist="])
+                     "out-raw-bc=", "out-bc-whitelist=", "expect-cells="])
     except getopt.GetoptError:
         helper.err_msg("Error: Invalid argument input") 
         print_help()
@@ -259,7 +259,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None):
     return {k:v for k,v in raw_bc_count.items() if v > t}
 
 def main():
-    fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist, out_raw_bc, out_whitelist, cr_stype_output = parse_arg()
+    fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist, out_raw_bc, out_whitelist = parse_arg()
     
     # get raw bc
     fastq_fns = list(Path(fastq_dir).rglob('*.fastq'))
