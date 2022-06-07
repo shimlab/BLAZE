@@ -26,7 +26,7 @@ class Read(object):
             self.__dict__[attr_name] = attr_val
     
     
-    def find_adaptor(self,read=None, strand=None, adaptor_seq='CTTCCGATCT', num_nt=250, min_match_prop=0.8):
+    def find_adaptor(self,read=None, strand=None, adaptor_seq='CTTCCGATCT', num_nt=200, min_match_prop=0.8):
         '''
         find adaptor from a read
     

@@ -53,7 +53,7 @@ def parse_arg():
                 -h, --help
                     Print this help message.
                 
-                --expect-cells
+                --expect-cells (required in current version)
                     <INT>:  Expected number of cells. Default: not specified
                 
                 --minQ:
@@ -129,7 +129,9 @@ def parse_arg():
     if not os.path.isdir(fastq_dir):
         helper.err_msg("Error: Input directory doesn't exist. Note that the input should be a directory instead of file.") 
         sys.exit(1)
-    
+    if not exp_cells:
+        helper.err_msg("--expect-cells is required to build the whitelist!") 
+        sys.exit(1)
     return fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist, out_raw_bc, out_whitelist
 
 
@@ -237,7 +239,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None):
     '''
     def percentile_count_thres(count_array, exp_cells):
         top_count = np.sort(count_array)[::-1][:exp_cells]
-        return np.quantial(top_count)/10
+        return np.quantile(top_count, 0.99)/10
     
     
     whole_whitelist = []
@@ -257,7 +259,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None):
     return {k:v for k,v in raw_bc_count.items() if v > t}
 
 def main():
-    fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist, out_raw_bc, out_whitelist = parse_arg()
+    fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist, out_raw_bc, out_whitelist, cr_stype_output = parse_arg()
     
     # get raw bc
     fastq_fns = list(Path(fastq_dir).rglob('*.fastq'))
@@ -280,9 +282,10 @@ def main():
     qc_report(raw_bc_pass_count, min_phred_score = min_phred_score)
     
     bc_whitelist = get_bc_whitelist(raw_bc_count,full_bc_whitelist, exp_cells)
-    with open(out_whitelist+'.txt', 'w') as f:
+
+    with open(out_whitelist+'.csv', 'w') as f:
         for k in bc_whitelist.keys():
-            f.write(k+'\n')
+            f.write(k+'-1\n')
     
     if out_raw_bc:
         rst_df.to_csv(out_raw_bc+'.csv', index=False)
