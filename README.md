@@ -18,7 +18,7 @@ The scripts are in `bin`.
 All [dependencies](#dependencies) can be installed using "conda", the configuration file can be found at `conda_env/`:
 ```
 conda env create -f conda_env/environment.yml
-conda activate sc_demulti
+conda activate blaze
 ```
 
 ## <a name="dependencies"></a>Dependencies

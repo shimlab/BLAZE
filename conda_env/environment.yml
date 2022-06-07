@@ -1,4 +1,4 @@
-name: sc_demulti
+name: blaze
 channels:
   - bioconda
   - default
