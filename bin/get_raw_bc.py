@@ -40,6 +40,7 @@ import numpy as np
 
 
 import helper
+from config import *
 from polyT_adaptor_finder import Read
 
 def parse_arg():
@@ -85,10 +86,10 @@ def parse_arg():
     # Default 
     n_process = mp.cpu_count()-1
     exp_cells = None
-    min_phred_score = 15
-    full_bc_whitelist = os.path.join(os.path.dirname(__file__), '../10X_bc/3M-february-2018.txt')
-    out_raw_bc = 'raw_bc'
-    out_whitelist = 'whitelist'
+    min_phred_score = DEFAULT_GRB_MIN_SCORE
+    full_bc_whitelist = DEFAULT_GRB_WHITELIST
+    out_raw_bc = DEFAULT_GRB_OUT_RAW_BC
+    out_whitelist = DEFAULT_GRB_OUT_WHITELIST
     
     # Read from options
 
@@ -237,9 +238,8 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None):
     list
 
     '''
-    def percentile_count_thres(count_array, exp_cells):
-        top_count = np.sort(count_array)[::-1][:exp_cells]
-        return np.quantile(top_count, 0.99)/10
+    # use the threshold function in config.py
+    percentile_count_thres = default_count_threshold_calculation
     
     
     whole_whitelist = []

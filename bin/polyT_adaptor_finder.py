@@ -5,6 +5,7 @@ import Bio
 import Bio.pairwise2
 
 import helper
+from config import *
 
 class Read(object):
     '''
@@ -26,7 +27,8 @@ class Read(object):
             self.__dict__[attr_name] = attr_val
     
     
-    def find_adaptor(self,read=None, strand=None, adaptor_seq='CTTCCGATCT', num_nt=200, min_match_prop=0.8):
+    def find_adaptor(self,read=None, strand=None, adaptor_seq=ADPT_SEQ, 
+                        num_nt=ADPT_WIN, min_match_prop=ADPT_MIN_MATCH_PROP):
         '''
         find adaptor from a read
     
@@ -48,6 +50,12 @@ class Read(object):
         Bio.pairwise2.Alignment
         *(adaptor_start, adaptor_end): adaptor start and end position (0-based) in reads
         '''
+        # check input
+        try:
+            assert 0<=min_match_prop <= 1
+        except:
+            raise AssertionError('value of min_match_prop must between 0-1.')
+
         strand = self._strand if not strand else strand
         read = self.seq if not read else read
         
@@ -116,8 +124,8 @@ class Read(object):
         
     # def find_poly_T(self, read=None, strand=None, 
     #                    poly_T_len=10, num_nt=200, min_match_prop=0.85):
-    def find_poly_T(self, read=None, strand=None, 
-                       poly_T_len=5, num_nt=200, min_match_prop=1):
+    def find_poly_T(self, read=None, strand=None, poly_T_len=PLY_T_LEN, 
+                    num_nt=PLY_T_WIN, min_match_prop=PLY_T_MIN_MATCH_PROP):
         '''
         find adaptor from a read
     
@@ -125,18 +133,16 @@ class Read(object):
         ----------
         read : STR
         num_nt : INT
-            The adaptor will be searched within first num_nt bases in the reads.
+            The polyT will be searched within first num_nt bases in the reads.
         strand : '+' or '-'
-            Transcript strand, this function will find adaptor in '-' poly T strand
-            Will do a reverse complement if strand == '-'
+            Transcript strand, this function search for polyT in '-' strand
+            and also search for polyA in '+' reverse complement
         poly_T_len : INT
-            How many Ts are used to match in the read. Default: 15.
+            How many Ts are used to match in the read. Default: 4.
         min_match_prop : float
-            min proportion of matches in the alignment. Default: 0.8
+            min proportion of matches in the alignment. Default: 1
         Returns
         -------
-        Bio.pairwise2.Alignment
-        *(adaptor_start, adaptor_end): adaptor start and end position (0-based) in reads
         '''
         strand = self._strand if not strand else strand
         read = self.seq if not read else read
@@ -165,7 +171,69 @@ class Read(object):
             return {**{k:v for k,v in T_strand.items() if v != 0},
                     **{k:v for k,v in A_strand.items() if v != 0}}
     
+
+
+
+    def find_poly_T_after_adaptor(self,adp_dict, read=None, strand=None, 
+                    poly_T_len=PLY_T_LEN, range_aft_adaptor=PLY_T_NT_AFT_ADPT, 
+                    min_match_prop=PLY_T_MIN_MATCH_PROP):
+        '''
+        find adaptor after adaptor
     
+        Parameters
+        ----------
+        adp_dict: dict
+            result from find_adaptor
+        read : STR
+        strand : '+' or '-'
+            Transcript strand, this function search for polyT in '-' strand
+            and also search for polyA in '+' reverse complement
+        poly_T_len : INT
+            How many Ts are used to match in the read. Default: 4.
+        min_match_prop : float
+            min proportion of matches in the alignment. Default: 1
+        range_aft_adaptor: tuple
+            a range specifying where polyT will be searched after the adaptor
+        Returns
+
+        -------
+        '''
+
+        # check input
+        try:
+            assert 0<=min_match_prop <= 1
+        except:
+            raise AssertionError('value of min_match_prop must between 0-1.')
+
+        strand = self._strand if not strand else strand
+        read = self.seq if not read else read
+        if strand == '-':
+            seq = read[:num_nt]
+            # convert to np_array T -> 1 and ACG -> 0
+            read_code = np.array([int(x == 'T') for x in seq])
+            T_prop = helper.sliding_window_mean(read_code, poly_T_len)
+            wind_start_T = read_code[:-poly_T_len]
+            first_index = np.argmax(T_prop*wind_start_T >= min_match_prop)
+            return {'-':first_index}
+        
+        if strand == '+':
+            return {'+': self.find_poly_T(
+                read=helper.reverse_complement(read), strand='-', 
+                poly_T_len=poly_T_len, num_nt=num_nt, 
+                min_match_prop=min_match_prop)['-']}
+        else:
+            A_strand = {'+': self.find_poly_T(
+                read=helper.reverse_complement(read), strand='-', 
+                poly_T_len=poly_T_len, num_nt=num_nt, 
+                min_match_prop=min_match_prop)['-']}
+            T_strand = self.find_poly_T(
+                strand='-', poly_T_len=poly_T_len, num_nt=num_nt, 
+                min_match_prop=min_match_prop)
+            return {**{k:v for k,v in T_strand.items() if v != 0},
+                    **{k:v for k,v in A_strand.items() if v != 0}}
+
+
+
     def get_strand_and_raw_bc(self):
         '''
         Found the strand of read, raw start (i.e. end of adaptor) and end (
@@ -200,8 +268,10 @@ class Read(object):
             apt_end_pos = list(set([x.end for x in adapt_dict.get(strand, [])]))
             apt_end_pos = np.array(apt_end_pos)
             try:
+                # dictance in nt between poly T and adaptor
+                d_1, d_2 = PLY_T_NT_AFT_ADPT
                 adp_in_t_upstream = np.array(
-                    [int(20< t_pos - x < 50) for x in apt_end_pos])
+                    [int(d_1< t_pos - x < d_2) for x in apt_end_pos])
             except:
                 print(t_pos, apt_end_pos, self.seq, strand)
                 raise ValueError('...')
