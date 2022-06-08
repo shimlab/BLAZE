@@ -252,7 +252,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None):
 
     
     if exp_cells:
-        t = percentile_count_thres(raw_bc_count.values(), exp_cells)
+        t = percentile_count_thres(list(raw_bc_count.values()), exp_cells)
     else:
         t = -1
     
@@ -275,7 +275,8 @@ def main():
         raw_bc_pass_count += count_pass
         rst_dfs.append(rst_df)
     rst_df = pd.concat(rst_dfs)
-    
+    if out_raw_bc:
+        rst_df.to_csv(out_raw_bc+'.csv', index=False)
     
     
     # output
@@ -287,8 +288,7 @@ def main():
         for k in bc_whitelist.keys():
             f.write(k+'-1\n')
     
-    if out_raw_bc:
-        rst_df.to_csv(out_raw_bc+'.csv', index=False)
+
 
 if __name__ == '__main__':
     main()
