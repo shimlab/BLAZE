@@ -1,5 +1,5 @@
 # BLAZE (Barcode identification from Long reads for AnalyZing single cell gene Expression)
-**Important Notes:** This repo is actively being updated updated. Please make sure you have the latest commit. To do this, you can run `git pull` before you run the script, which may potential avoid some errors.
+**Important Notes:** This repo is actively being updated. Please make sure you have the latest commit. To do this, you can run `git pull` before you run the script, which may potential avoid some errors.
 
 
 ## Keywords:
