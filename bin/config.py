@@ -1,6 +1,7 @@
 # This file stores the parameter used in this repo
 
 import os
+import numpy as np
 ####################################################
 ############# polyT and adaptor finding#############
 ####################################################
@@ -10,7 +11,7 @@ ADPT_WIN=200 #search adaptor in subsequence from both end of the reads with this
 ADPT_MIN_MATCH_PROP=0.8 #minimum proportion of match required when searching
 
 ## poly T searching
-PLY_T_LEN=5 #length of searched poly T
+PLY_T_LEN=4 #length of searched poly T
 PLY_T_WIN=200 #search poly T in subsequence from both end of the reads with this size
 PLY_T_MIN_MATCH_PROP=1#minimum proportion of match required when searching
 PLY_T_NT_AFT_ADPT=(20,50)#a poly T should locate within this range downstream an adaptor
@@ -30,6 +31,6 @@ DEFAULT_GRB_OUT_RAW_BC='raw_bc'
 DEFAULT_GRB_OUT_WHITELIST = 'whitelist'
 
 # defualt count threshold
-def default_count_threshold_calculation(count_array, exp_cells)
+def default_count_threshold_calculation(count_array, exp_cells):
     top_count = np.sort(count_array)[::-1][:exp_cells]
     return np.quantile(top_count, 0.99)/10
