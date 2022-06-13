@@ -57,9 +57,9 @@ python3 get_raw_bc.py -h
 **Output:**
 1. Print when running: stats of the raw barcode in reads
 2. Raw barcode in each read, default filename: raw_bc.csv. It contains 3 columns
-    col1: read id
-    col2: raw barcode in read
-    col3: minimum Phred score of the bases in barcode
+    * col1: read id
+    * col2: raw barcode in read
+    * col3: minimum Phred score of the bases in barcode
     **Note:** col2 and 3 will be empty if barcode not found. 
 3. Cell-ranger style barcode whitelist, default filename: whitelist.csv
 4. Knee plot using the raw barcode with high quality.
