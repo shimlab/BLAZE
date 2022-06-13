@@ -221,7 +221,7 @@ def qc_report(pass_count, min_phred_score):
     print(textwrap.dedent(print_message))
     
     
-def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None):
+def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None, count_t = None):
     '''
     Get a whitelist from all raw cell bc. If the expect number of cell is provided,
     
@@ -250,13 +250,16 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None):
     
     raw_bc_count = {k:v for k,v in raw_bc_count.items() if k in whole_whitelist}
 
+    # determine real bc based on the count threshold
+    if count_t:
+        return {k:v for k,v in raw_bc_count.items() if v > count_t}
     
-    if exp_cells:
+    elif exp_cells:
         t = percentile_count_thres(list(raw_bc_count.values()), exp_cells)
-    else:
-        t = -1
-    
-    return {k:v for k,v in raw_bc_count.items() if v > t}
+        return {k:v for k,v in raw_bc_count.items() if v > t}
+    else: 
+        raise ValueError('Invalid value of count_t and/or exp_cells.')
+   
 
 def main():
     fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist, out_raw_bc, out_whitelist = parse_arg()
@@ -282,7 +285,9 @@ def main():
     # output
     qc_report(raw_bc_pass_count, min_phred_score = min_phred_score)
     
-    bc_whitelist = get_bc_whitelist(raw_bc_count,full_bc_whitelist, exp_cells)
+    bc_whitelist = get_bc_whitelist(raw_bc_count,
+                                    full_bc_whitelist, 
+                                    exp_cells=exp_cells)
 
     with open(out_whitelist+'.csv', 'w') as f:
         for k in bc_whitelist.keys():
