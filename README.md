@@ -60,6 +60,7 @@ python3 get_raw_bc.py -h
     * col1: read id
     * col2: raw barcode in read
     * col3: minimum Phred score of the bases in barcode
+   
     **Note:** col2 and 3 will be empty if barcode not found. 
 3. Cell-ranger style barcode whitelist, default filename: whitelist.csv
 4. Knee plot using the raw barcode with high quality.
