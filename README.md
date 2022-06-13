@@ -36,7 +36,7 @@ conda activate blaze
 # Module:
 
 ## `get_raw_bc`: Get raw BC and BC whitelist from fastq files
-This script has been tested on Chromium **Single Cell 3ʹ gene expression v3** and should be able to work on **Chromium Single Cell 3ʹ gene expression v2**, but it doesn't support any 10X 5' gene expression kit 
+This script has been tested on Chromium **Single Cell 3ʹ gene expression v3** and should be able to work on **Chromium Single Cell 3ʹ gene expression v2**, but it doesn't support any 10X 5' gene expression kit.
 
 **Input:** 
  * *Folder of the fastq files*
@@ -53,43 +53,8 @@ python3 get_raw_bc.py --expect-cells=1000 --threads=12 path/to/fastq_pass
 ```
 python3 get_raw_bc.py -h
 ```
-```
-Summary: 
-    Get raw BC and BC whitelist from fastq files
 
-Usage: python3 get_raw_bc.py [Options] <fastq directory>
-
-Options:
-    -h, --help
-        Print this help message.
-    
-    --full-bc-whitelist (required in current version)
-        <path to file>: .txt file containing all the possible BCs. Users may provide
-        their own whitelist. Default: 3M BC from 10X.
-    
-    --expect-cells (required in current version)
-        <INT>:  Expected number of cells. Default: not specified
-    
-    --minQ:
-        <INT>: Minimum phred score for all bases in a raw BC. Reads whose 
-        raw BC contains one or more bases with Q<minQ is not counted 
-        in the "Raw BC rank plot". Default: --minQ=15
-    
-
-    
-    --out-raw-bc
-        <filename_prefix>: Output a csv file for the raw BC in each read. 
-                            Default: --out-raw-bc=raw_bc
-    
-    --out-bc-whitelist
-        <filename_prefix>: Output the whitelist identified from all the reads. 
-                            Default: --out-bc-whitelist=whitelist
-    
-    --threads
-        <INT>: Number of threads used <default: # of available cpus - 1> 
-```
-
-Output:
+**Output:**
 1. Print when running: stats of the raw barcode in reads
 2. Raw barcode in each read, default filename: raw_bc.csv. It contains 3 columns
     col1: read id
@@ -97,3 +62,8 @@ Output:
     col3: minimum Phred score of the bases in barcode
     **Note:** col2 and 3 will be empty if barcode not found. 
 3. Cell-ranger style barcode whitelist, default filename: whitelist.csv
+4. Knee plot using the raw barcode with high quality.
+
+**Note:**
+1. The raw barcodes are the 16nt sequence after identifed 10X adaptor within each read without correction for any basecalling error.
+2. This module process individual FASTQ files in the input folder in separate CPUs to achieve multiprocessing. This means that the multiprocessing will NOT work if the input folder contains only one large FASTQ file. Splitting is recommended in this case.
