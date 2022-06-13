@@ -85,5 +85,5 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_arg()
-    print(args)
-    #main(args)
+    #print(args)
+    main(args)

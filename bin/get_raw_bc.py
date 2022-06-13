@@ -36,7 +36,7 @@ import textwrap
 from pathlib import Path
 import pandas as pd
 import numpy as np
-
+from matplotlib import pyplot as plt
 
 
 import helper
@@ -250,16 +250,32 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None, count_t 
     
     raw_bc_count = {k:v for k,v in raw_bc_count.items() if k in whole_whitelist}
 
+    # plot
+
+    
     # determine real bc based on the count threshold
     if count_t:
+        knee_plot(list(raw_bc_count.values()), count_t)
         return {k:v for k,v in raw_bc_count.items() if v > count_t}
     
     elif exp_cells:
         t = percentile_count_thres(list(raw_bc_count.values()), exp_cells)
+        knee_plot(list(raw_bc_count.values()), t)
         return {k:v for k,v in raw_bc_count.items() if v > t}
     else: 
         raise ValueError('Invalid value of count_t and/or exp_cells.')
    
+def knee_plot(counts, threshold=None):
+    plt.figure(figsize=(8, 8))
+    plt.title(f'Knee plot (from high-confident raw BC)')
+    plt.loglog(counts,marker = 'o', linestyle="", alpha = 1, markersize=6)
+    plt.xlabel('Barcodes')
+    plt.ylabel('Read counts')
+    plt.axhline(y=threshold, color='r', linestyle='--', label = 'cell calling threshold')
+    plt.legend()
+    plt.savefig('knee_plot.png')
+
+
 
 def main():
     fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist, out_raw_bc, out_whitelist = parse_arg()
