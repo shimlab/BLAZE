@@ -12,7 +12,6 @@ Combining the single-cell RNA sequencing technology with Nanopore long sequencin
 
 ```
 git clone https://github.com/youyupei/BLAZE.git
-unzip BLAZE/10X_bc/3M-february-2018.zip
 cd BLAZE
 ```
 The scripts are in `bin`.
@@ -40,7 +39,7 @@ This script has been tested on Chromium **Single Cell 3ʹ gene expression v3** a
 
 **Input:** 
  * *Folder of the fastq files*
- * *10X BC barcode whitelist*: list containing all the possible barcode ([more details](https://kb.10xgenomics.com/hc/en-us/articles/115004506263-What-is-a-barcode-whitelist-)). By default, this module assumes **Single Cell 3ʹ gene expression v3** and use the file `10X_bc/3M-february-2018.txt` (you can get this file by unzipping `10X_bc/3M-february-2018.zip` if you haven't). Please specify a different file if you are using **Single Cell 3ʹ gene expression v2** kit.
+ * *10X BC barcode whitelist*: list containing all the possible barcode ([more details](https://kb.10xgenomics.com/hc/en-us/articles/115004506263-What-is-a-barcode-whitelist-)). By default, this module assumes **Single Cell 3ʹ gene expression v3** and use the file `10X_bc/3M-february-2018.zip`. Please specify a different file if you are using **Single Cell 3ʹ gene expression v2** kit.
 
  * *expected number of cells*: In the current version, the expected number (roughly) of cells is required input (specify `--expect-cells=xx`). 
 
