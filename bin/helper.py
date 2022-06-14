@@ -3,6 +3,8 @@ import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import multiprocessing as mp
 from tqdm import tqdm
+import os
+import sys
 
 def reverse_complement(seq):
 	'''
@@ -96,7 +98,15 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1, pbar = Tr
     return futures
 
 
-
+# check file exist
+def check_exist(file_list):
+    exit_code = 0
+    for fn in file_list:
+        if not os.path.exists(fn):
+            exit_code = 1
+            err_msg(f'Error: can not find {fn}')
+    if exit_code == 1:
+        sys.exit()
 
     
     

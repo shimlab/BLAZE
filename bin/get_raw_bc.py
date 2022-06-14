@@ -65,9 +65,14 @@ def parse_arg():
                     raw BC contains one or more bases with Q<minQ is not counted 
                     in the "Raw BC rank plot". Default: --minQ=15
                 
+                --kit-version:
+                    Choose from v2 and v3 (for 10X Single Cell 3ʹ gene expression v2 or v3). 
+                    Default: --kit_version=v3.
+
                 --full-bc-whitelist=
                     <path to file>: .txt file containing all the possible BCs. Users may provide
-                    their own whitelist. Default: 3M BC from 10X.
+                    their own whitelist. No need to specify this if users want to use the 10X whilelist. 
+                    The correct version of 10X whilelist will be determined based on 10X kit version.
                 
                 --out-raw-bc
                     <filename_prefix>: Output a csv file for the raw BC in each read. 
@@ -89,8 +94,9 @@ def parse_arg():
     # Default 
     n_process = mp.cpu_count()-1
     exp_cells = None
+    full_bc_whitelist = None
     min_phred_score = DEFAULT_GRB_MIN_SCORE
-    full_bc_whitelist = DEFAULT_GRB_WHITELIST
+    kit = DEFAULT_GRB_KIT
     out_raw_bc = DEFAULT_GRB_OUT_RAW_BC
     out_whitelist = DEFAULT_GRB_OUT_WHITELIST
     
@@ -99,7 +105,7 @@ def parse_arg():
     try: 
         opts, args = getopt.getopt(argv[1:],"h",
                     ["help","threads=","minQ=","full-bc-whitelist=",
-                     "out-raw-bc=", "out-bc-whitelist=", "expect-cells="])
+                     "out-raw-bc=", "out-bc-whitelist=", "expect-cells=", "kit-version="])
     except getopt.GetoptError:
         helper.err_msg("Error: Invalid argument input") 
         print_help()
@@ -121,7 +127,26 @@ def parse_arg():
             out_raw_bc = arg      
         elif opt == "--out-bc-whitelist":
             out_whitelist = arg 
-            
+        elif opt == "--kit-version":
+            kit = arg.lower()
+
+
+    if kit not in ['v2', 'v3']:
+        helper.err_msg("Error: Invalid value of --kit-version, please choose from v3 or v2") 
+        sys.exit()
+
+    if full_bc_whitelist:
+        helper.warning_msg(textwrap.dedent(
+            f'You are using {os.path.basename(full_bc_whitelist)} as the full barcode'\
+            'whitelist. Note that the barcodes not listed in the file will never be found.'))
+    else:
+        if kit == 'v3':
+            full_bc_whitelist = DEFAULT_GRB_WHITELIST_V3
+        elif kit == 'v2':
+            full_bc_whitelist = DEFAULT_GRB_WHITELIST_V2
+
+    
+
     # Read from args
     if not args:
         helper.err_msg("Error: Missing fastq directory.")   
@@ -136,6 +161,10 @@ def parse_arg():
     if not exp_cells:
         helper.err_msg("--expect-cells is required to build the whitelist!") 
         sys.exit(1)
+
+
+    # check file
+    helper.check_exist([full_bc_whitelist, fastq_dir])
     return fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist, out_raw_bc, out_whitelist
 
 
@@ -324,6 +353,7 @@ def main():
     print("Getting whitelist...\n")
     
     logger = logging.getLogger()
+
     try:
         bc_whitelist = get_bc_whitelist(raw_bc_count,
                                 full_bc_whitelist, 

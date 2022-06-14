@@ -8,6 +8,7 @@ from get_raw_bc import get_bc_whitelist
 from config import *
 import helper
 import sys
+import os
 
 def parse_arg():
     parser = argparse.ArgumentParser(
@@ -33,6 +34,11 @@ def parse_arg():
     #parser.add_argument('opt_pos_arg', type=int, nargs='?',help)
 
     # Optional argument
+    parser.add_argument('--kit-version', type=str, default='v3',
+                        help= textwrap.dedent(
+                            '''
+                            Choose from v2 and v3 (for 10X Single Cell 3ʹ gene expression v2 or v3). 
+                            '''))
     parser.add_argument('--minQ', type=int, default=15,
                         help= textwrap.dedent(
                             '''
@@ -40,9 +46,10 @@ def parse_arg():
                             Reads whose raw BC contains one or more bases with 
                             Q<minQ is not counted in the "Raw BC rank plot".'''))
 
-    parser.add_argument('--full-bc-whitelist', type=str, default=DEFAULT_GRB_WHITELIST,
+    parser.add_argument('--full-bc-whitelist', type=str, default=None,
                         help='''<path to file>: .txt file containing all the possible BCs. Users may provide
-        their own whitelist.''')
+        their own whitelist. No need to specify this if users want to use the 10X whilelist. The correct version
+        of 10X whilelist will be determined based on 10X kit version''')
     parser.add_argument('--out-bc-whitelist', type=str, default=DEFAULT_GRB_OUT_WHITELIST,
                         help='''<filename_prefix>: Output the whitelist identified from all the reads.''')
     parser.add_argument('--cr_style', type=bool, nargs='?',const=True, default=True,
@@ -56,9 +63,27 @@ def parse_arg():
     if args.expect_cells and args.count_threshold:
         helper.warning_msg(textwrap.dedent(
                 f'''
-                You have specified both '--expect-cells' and '--count-threshold'. \
+                Warning: You have specified both '--expect-cells' and '--count-threshold'. \
 '--expect-cells' will be ignored.                
                 '''))
+    
+    args.kit_version = args.kit_version.lower()
+    if args.kit_version not in ['v2', 'v3']:
+        helper.err_msg("Error: Invalid value of --kit-version, please choose from v3 or v2") 
+        sys.exit()
+
+    if args.full_bc_whitelist:
+        helper.warning_msg(textwrap.dedent(
+                f'You are using {os.path.basename(args.full_bc_whitelist)} as the full barcode'\
+                'whitelist. Note that the barcodes not listed in the file will never be found.'))
+    else:
+        if args.kit_version == 'v3':
+            args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_V3
+        elif args.kit_version == 'v2':
+            args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_V2
+
+    # check file 
+    helper.check_exist([args.full_bc_whitelist, args.raw_bc_csv])
     return args
 
 
@@ -74,6 +99,7 @@ def main(args):
                                     args.expect_cells,
                                     args.count_threshold)
 
+    print(args.full_bc_whitelist)
     if args.cr_style:
         with open(args.out_bc_whitelist+'.csv', 'w') as f:
             for k in bc_whitelist.keys():

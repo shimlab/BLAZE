@@ -7,6 +7,7 @@ import numpy as np
 ############# polyT and adaptor finding#############
 ####################################################
 ## adaptor finding
+
 ADPT_SEQ='CTTCCGATCT' #searched adaptor sequence
 ADPT_WIN=200 #search adaptor in subsequence from both end of the reads with this size
 ADPT_MIN_MATCH_PROP=0.8 #minimum proportion of match required when searching
@@ -24,8 +25,12 @@ PLY_T_NT_AFT_ADPT=(20,50)#a poly T should locate within this range downstream an
 ####################################################
 # input
 DEFAULT_GRB_MIN_SCORE=15
-DEFAULT_GRB_WHITELIST=\
-    os.path.join(os.path.dirname(__file__), '../10X_bc/3M-february-2018.zip')
+DEFAULT_GRB_KIT='v3'
+
+DEFAULT_GRB_WHITELIST_V3=\
+        os.path.join(os.path.dirname(__file__), '../10X_bc/3M-february-2018.zip')
+DEFAULT_GRB_WHITELIST_V2=\
+        os.path.join(os.path.dirname(__file__), '../10X_bc/737K-august-2016.txt')
 
 #output
 DEFAULT_GRB_OUT_RAW_BC='raw_bc'
