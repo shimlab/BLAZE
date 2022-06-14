@@ -25,7 +25,7 @@ PLY_T_NT_AFT_ADPT=(20,50)#a poly T should locate within this range downstream an
 # input
 DEFAULT_GRB_MIN_SCORE=15
 DEFAULT_GRB_WHITELIST=\
-    os.path.join(os.path.dirname(__file__), '../10X_bc/3M-february-2018.txt')
+    os.path.join(os.path.dirname(__file__), '../10X_bc/3M-february-2018.zip')
 
 #output
 DEFAULT_GRB_OUT_RAW_BC='raw_bc'

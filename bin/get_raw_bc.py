@@ -37,6 +37,9 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
+import zipfile
+import io
+import logging
 
 
 import helper
@@ -242,10 +245,22 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None, count_t 
     percentile_count_thres = default_count_threshold_calculation
     
     
-    whole_whitelist = []
-    with open(full_bc_whitelist, 'r') as f:
-        for line in f:
-            whole_whitelist.append(line.strip())
+    whole_whitelist = []    
+    
+    if full_bc_whitelist.endswith('.zip'):
+        with zipfile.ZipFile(full_bc_whitelist) as zf:
+            # check if there is only 1 file
+            assert len(zf.namelist()) == 1
+
+            with io.TextIOWrapper(zf.open(zf.namelist()[0]), 
+                                                    encoding="utf-8") as f:
+                for line in f:
+                    whole_whitelist.append(line.strip())
+    else:
+        with open(full_bc_whitelist, 'r') as f:
+            for line in f:
+                whole_whitelist.append(line.strip())
+    
     whole_whitelist = set(whole_whitelist)
     
     raw_bc_count = {k:v for k,v in raw_bc_count.items() if k in whole_whitelist}
@@ -282,8 +297,9 @@ def main():
     
     # get raw bc
     fastq_fns = list(Path(fastq_dir).rglob('*.fastq'))
-    rst_futures = helper.multiprocessing_submit(get_raw_bc_from_fastq ,
-                                                fastq_fns, min_q=min_phred_score)
+    print(f'Getting raw barcodes from {len(fastq_fns)} FASTQ files...')
+    rst_futures = helper.multiprocessing_submit(get_raw_bc_from_fastq,
+                                                fastq_fns, n_process=n_process, min_q=min_phred_score)
     
     raw_bc_count = Counter([])
     raw_bc_pass_count = Counter([])    
@@ -294,21 +310,38 @@ def main():
         raw_bc_pass_count += count_pass
         rst_dfs.append(rst_df)
     rst_df = pd.concat(rst_dfs)
+    
+    print('\nPreparing raw barcode table...')
     if out_raw_bc:
         rst_df.to_csv(out_raw_bc+'.csv', index=False)
-    
+    helper.green_msg(f'Raw barcode table saved in {out_raw_bc}.csv')
     
     # output
+    print('\n----------------------stats of the raw barcode in reads--------------------------')
     qc_report(raw_bc_pass_count, min_phred_score = min_phred_score)
-    
-    bc_whitelist = get_bc_whitelist(raw_bc_count,
-                                    full_bc_whitelist, 
-                                    exp_cells=exp_cells)
+    print('-----------------------------------------------------\n')
 
-    with open(out_whitelist+'.csv', 'w') as f:
-        for k in bc_whitelist.keys():
-            f.write(k+'-1\n')
+    print("Getting whitelist...\n")
     
+    logger = logging.getLogger()
+    try:
+        bc_whitelist = get_bc_whitelist(raw_bc_count,
+                                full_bc_whitelist, 
+                                exp_cells=exp_cells)
+        with open(out_whitelist+'.csv', 'w') as f:
+            for k in bc_whitelist.keys():
+                f.write(k+'-1\n')
+    except Exception as e:
+        logger.exception(e)
+        helper.err_msg(
+            "Error: Failed to get whitelist. Please check the input files and settings."\
+            "Note that the whilelist can be obtained"\
+            f"from {out_raw_bc}.csv by using update_whitelist.py."\
+            "Run \"python3 BLAZE/bin/update_whitelist.py -h\"  for more details."
+            )
+    else:
+        helper.green_msg(f'Whitelist saved as {out_whitelist}.csv!')
+        
 
 
 if __name__ == '__main__':

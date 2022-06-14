@@ -82,7 +82,7 @@ def main(args):
         with open(args.out_bc_whitelist+'.csv', 'w') as f:
             for k in bc_whitelist.keys():
                 f.write(k+'\n')
-
+    helper.green_msg(f'Whitelist saved as {args.out_bc_whitelist}.csv!')
 if __name__ == '__main__':
     args = parse_arg()
     #print(args)

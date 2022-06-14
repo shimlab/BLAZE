@@ -25,9 +25,13 @@ def err_msg(msg):
 def warning_msg(msg):
 	CRED = '\033[93m'
 	CEND = '\033[0m'
-	print(CRED + msg + CEND)	
-    
-    
+	print(CRED + msg + CEND)
+
+def green_msg(msg):
+    CRED = '\033[92m'
+    CEND = '\033[0m'
+    print(CRED + msg + CEND)
+
 def sliding_window_sum(array, window) :
     cum = np.cumsum(array)  
     return cum[window:] - cum[:-window]
