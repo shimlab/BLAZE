@@ -39,9 +39,9 @@ This script has been tested on Chromium **Single Cell 3ʹ gene expression v3** a
 
 **Input:** 
  * *Folder of the fastq files*
- * *10X BC barcode whitelist*: list containing all the possible barcode ([more details](https://kb.10xgenomics.com/hc/en-us/articles/115004506263-What-is-a-barcode-whitelist-)). By default, this module assumes **Single Cell 3ʹ gene expression v3** and use the file `10X_bc/3M-february-2018.zip`. Please specify a different file if you are using **Single Cell 3ʹ gene expression v2** kit.
+ * *10X barcode whitelist*: a file containing all the possible barcode ([more details](https://kb.10xgenomics.com/hc/en-us/articles/115004506263-What-is-a-barcode-whitelist-)). The 10X barcode whitelists for both v2 and v3 chemistry of 10X Single Cell 3ʹ gene expression have been packed in `10X_bc/`. By default, this module assumes v3 chemistry and use the file `10X_bc/3M-february-2018.zip`. You may specify `--kit-version=v2` to use the whitelist for v2 chemistry, or provide your own whitelist by specifying `--full-white-list=<filename>`. Note that barcodes outside this whitelist will never be found in the output.
 
- * *expected number of cells*: In the current version, the expected number (roughly) of cells is required input (specify `--expect-cells=xx`). 
+ * *expected number of cells*: In the current version, the expected number of cells is required input (specify `--expect-cells=xx`). Note that the output is NOT sensitive to the specified number, but a rough number is required.
 
 **Example code:**
 ```
