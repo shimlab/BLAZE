@@ -310,6 +310,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None, count_t 
         raise ValueError('Invalid value of count_t and/or exp_cells.')
    
 def knee_plot(counts, threshold=None):
+    counts = sorted(counts)[::-1]
     plt.figure(figsize=(8, 8))
     plt.title(f'Knee plot (from high-confident raw BC)')
     plt.loglog(counts,marker = 'o', linestyle="", alpha = 1, markersize=6)
@@ -320,7 +321,7 @@ def knee_plot(counts, threshold=None):
     plt.savefig('knee_plot.png')
 
 
-
+ 
 def main():
     fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist, out_raw_bc, out_whitelist = parse_arg()
     
