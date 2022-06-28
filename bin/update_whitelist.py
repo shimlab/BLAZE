@@ -3,12 +3,15 @@
 import argparse
 import textwrap
 import pandas as pd
+from collections import defaultdict, Counter
+import sys
+import os
+from tqdm import tqdm
 
 from get_raw_bc import get_bc_whitelist
 from config import *
 import helper
-import sys
-import os
+
 
 def parse_arg():
     parser = argparse.ArgumentParser(
@@ -52,8 +55,11 @@ def parse_arg():
         of 10X whilelist will be determined based on 10X kit version''')
     parser.add_argument('--out-bc-whitelist', type=str, default=DEFAULT_GRB_OUT_WHITELIST,
                         help='''<filename_prefix>: Output the whitelist identified from all the reads.''')
-    parser.add_argument('--cr_style', type=bool, nargs='?',const=True, default=True,
+    parser.add_argument('--cr-style', type=bool, nargs='?',const=True, default=True,
                         help='Output the whitelist in Cellranger style')
+    parser.add_argument('--chunk-size', type=int, default=1_000_000,
+                        help='Chunksize when reading the input file. Please use'
+                        'smaller number if memory is not sufficient.')
     
     args = parser.parse_args()
 
@@ -90,10 +96,16 @@ def parse_arg():
 
 def main(args):
     # read table
-    df = pd.read_csv(args.raw_bc_csv)
-    # get bc count dict (filtered by minQ)
-    raw_bc_count = df[df.raw_bc_min_q >=args.minQ].raw_bc.value_counts().to_dict()
+    dfs = pd.read_csv(args.raw_bc_csv, chunksize=args.chunk_size)
     
+    # get bc count dict (filtered by minQ)
+    
+    raw_bc_count = Counter()
+    for df in tqdm(dfs, desc = 'Counting high-confidence raw BC'):
+        raw_bc_count += Counter(df[
+            df.raw_bc_min_q >=args.minQ].raw_bc.value_counts().to_dict())
+
+    print('Preparing whitelist...')
     bc_whitelist = get_bc_whitelist(raw_bc_count,
                                     args.full_bc_whitelist, 
                                     args.expect_cells,
