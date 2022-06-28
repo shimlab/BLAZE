@@ -99,7 +99,6 @@ def main(args):
                                     args.expect_cells,
                                     args.count_threshold)
 
-    print(args.full_bc_whitelist)
     if args.cr_style:
         with open(args.out_bc_whitelist+'.csv', 'w') as f:
             for k in bc_whitelist.keys():
