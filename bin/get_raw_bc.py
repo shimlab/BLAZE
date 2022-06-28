@@ -1,30 +1,17 @@
 """
-Get raw BC from either fastq file or bam file
+Get raw BC from fastq file
 
 Output:
     1. csv file a the raw BC count
-    2. fastq or BAM with tagged raw BC start position
-    3. Stats report (stdout):
+    2. Stats report (stdout):
         a. how many input read in total (only look at primary alignment if BAM provided)
         b. how many (# and %) read pass the polyT and adaptor searching process.
         c. # and % with poly T and adaptor find in both ends
         d. # adnd % with no poly T and adpator find
-        e. # of BC identified
-        f. # of reads exactly match the BC
-        g. # of reads approximately match the BC with ED = 1
-        h. # of reads approximately match the BC with ED = 2
-        i. # of reads approximately match the BC with ED = 3
-        j. # of reads approximately match the BC with ED > 4
-    4. BC rank plot
-    5. csv file of the identified cell-associated BC
+    3. BC rank plot
+    4. csv file of the BC whitelist
 """
-
-
-
-# step 1:
-    ## get the raw BC count
-    
-    
+  
 import sys
 import os
 import getopt
@@ -377,32 +364,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-# run multiprocessing
-
-
-# Parse BAM -> polyT_adaptor_finder.Read class
-
-
-
-# # test
-# test_data = ['../test_data/FAP25193_pass_c3ecd52d_2789.fastq','../test_data/FAP25193_pass_c3ecd52d_2790.fastq']
-# raw_bc = []
-# raw_bc_pass = []
-# raw_bc_count = Counter([])
-
-# fastq = Bio.SeqIO.parse(test_data, "fastq")
-# for i,r in tqdm(enumerate(fastq)):
-#     if i < 100000:
-#         read = Read(sequence=str(r.seq), strand=r.letter_annotations['phred_quality'])        
-#         read.get_strand_and_raw_bc()
-#         raw_bc.append(read.raw_bc)
-#         raw_bc_pass.append(read.adaptor_polyT_pass)
-# raw_bc_count += Counter(raw_bc)
-
-
-# seq = 'AATCATGCTTCGTTCAATTGCACGTATACCTACTAAAGCCTTCCAGCCTACGACGCTCTTCCGATCTCCAGCGTCGGTCATAATTATAAATAATTTTTTTTTTTTTTTTTTTTTTTGTGACGGAATCTTGTCACCAGGCTGGAGATACAGTGGCATGATCTTGGCTCACTGCAACCTCAGTCTCCTGAGTTCAAGCTTTTGATTCTTCTGTGGCCTCCCGAGTAGCTGGGACTACAGGCATGCGCCACCACGCCTGGCTACTTTTTGTATTTTTAGTAGAGACAGAGTTTCACCCTTATTGGCCACTGGTCTTGAACTCCTGACCTCGTGATCCGCCCACCTCGGGCTCCCAAAGTGCTGGGATTACAGGTATGAGCCACCACCCTGTGACCTTTTCTCAGACATTCTCTCAGCTCCAGCTGACCTGGGGTAGGATTACGGCCTCAAGAAGCAGCCCCCTTTCCATCGGAAGAGCAGAACCTTGGGCCCTGGCAGAGGCGAGGGCCTGAGTGAGACAGGCATTTGGTCCTGGCTCACTGCAAGCTTATAGAGCATTGCCAGAGTCATCTTGAGACCTCTGGGGCTTCGTGGAAGTTTCCTCTGTAGAAATGGAAAAATCTTTCAGATCCGGCCCTCGAGCGCAGCATTCTCTCTACAAAATTGGAGAAAGTTTCAAAATCCTAGGCTCAGGATCTGTAAGGATGTTCTCAAATGCAAAACCCATGATTTGGAAAGTCAGTGTAGAAAAATAGTGTTGGCTGGGCGCAGTGGCTGCTCCTATAATCCCAGCATGGGAGGCCGAGGTGGGCGAGTCACGAGGTCAGGAAATCGAGACCATCCTGGCCAACATGGTGAAACCCCGTCTCTACTAAAATACAAAAATTAGCCAGCCGTGGTGGTGCATGCCTGTAGTCCCAGCTGCTCTGGAGGCTAAGGCAGGAGAATCACTTGAAACTGGGAAGGCAGAGGTTGCAGTGAGCCGAGATTACGCCACTGCACTCCAGCCTGGGCGACAGAACGAAATCTGTCTCAAAGGGAAAGAAAGGGAGGAAGAGGAGAGGAGAGGAGGAGACAAGGATGTTGGCTGAGTGTAGTGGCTCACCTTTAATCCCAACACTTTGGGAGCAAAACGGTGGATTTACCTGAGTCGGAGACCCATGTACTCTGCATTGATACCACTGTAGCCATTACGGCCTGTAAAGCAATGCGCT'
-# read = Read(seq)
-# read.get_strand_and_raw_bc()
-# read.raw_bc
-
-
