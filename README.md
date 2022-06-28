@@ -6,7 +6,7 @@
 Oxford Nanopore sequencing, Demultiplexing, Single Cell, Barcode.
 
 # Overview
-Combining the single-cell RNA sequencing technology with Nanopore long sequencing enables the isoform level analysis in single cell. However, due to the relatively high error rate in Nanopore reads, the demultiplexing of cell barcode(cellBC) and Unique molecular Identifier (UMI) is challenging. This is a tool for identify cellBC solely from Nanopore reads.
+Combining single-cell RNA sequencing with Nanopore long-read sequencing enables isoform level analysis in single cells. However, due to the relatively high error rate in Nanopore reads, the demultiplexing of cell barcodes(cellBCs) and Unique molecular Identifiers (UMIs) is challenging. This tool enables the accurate identification of cellBCs solely from Nanopore reads. The output of BLAZE is a cellBC whitelist that can be utilised by downstream tools such as FLAMES to quantify genes and isoforms in single cells. 
 
 # Installation
 
@@ -35,13 +35,13 @@ conda activate blaze
 # Module:
 
 ## `get_raw_bc`: Get raw BC and BC whitelist from fastq files
-This script has been tested on Chromium **Single Cell 3ʹ gene expression v3** and should be able to work on **Chromium Single Cell 3ʹ gene expression v2**, but it doesn't support any 10X 5' gene expression kit.
+This script has been tested on Chromium **Single Cell 3ʹ gene expression v3** and should be able to work on **Chromium Single Cell 3ʹ gene expression v2**, but it doesn't support any 10X 5' gene expression kits.
 
 **Input:** 
  * *Folder of the fastq files*
- * *10X barcode whitelist*: a file containing all the possible barcode ([more details](https://kb.10xgenomics.com/hc/en-us/articles/115004506263-What-is-a-barcode-whitelist-)). The 10X barcode whitelists for both v2 and v3 chemistry of 10X Single Cell 3ʹ gene expression have been packed in `10X_bc/`. By default, this module assumes v3 chemistry and use the file `10X_bc/3M-february-2018.zip`. You may specify `--kit-version=v2` to use the whitelist for v2 chemistry, or provide your own whitelist by specifying `--full-white-list=<filename>`. Note that barcodes outside this whitelist will never be found in the output.
+ * *10X barcode whitelist*: a file containing all possible 10x barcodes ([more details](https://kb.10xgenomics.com/hc/en-us/articles/115004506263-What-is-a-barcode-whitelist-)). The 10X barcode whitelists for both the 10X Single Cell 3ʹ gene expression v2 and v3 chemistries have been packed in `10X_bc/`. By default, this module assumes v3 chemistry and uses the file `10X_bc/3M-february-2018.zip`. You may specify `--kit-version=v2` to use the whitelist for v2 chemistry, or provide your own whitelist by specifying `--full-white-list=<filename>`. Note that barcodes outside this whitelist will never be found in the output.
 
- * *expected number of cells*: In the current version, the expected number of cells is required input (specify `--expect-cells=xx`). Note that the output is NOT sensitive to the specified number, but a rough number is required.
+ * *expected number of cells*: In the current version, the expected number of cells is a required input (specify `--expect-cells=xx`). Note that the output is NOT sensitive to the specified number, but a rough number is required.
 
 **Example code:**
 ```
