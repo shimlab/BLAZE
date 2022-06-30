@@ -19,6 +19,7 @@ The scripts are in `bin`.
 ## Conda environment
 All [dependencies](#dependencies) can be installed using "conda", the configuration file can be found at `conda_env/`:
 ```
+conda config --set channel_priority true
 conda env create -f conda_env/environment.yml
 conda activate blaze
 ```

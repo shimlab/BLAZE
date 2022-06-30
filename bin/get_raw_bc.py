@@ -27,6 +27,7 @@ from matplotlib import pyplot as plt
 import zipfile
 import io
 import logging
+import kneed
 
 
 import helper
@@ -240,7 +241,8 @@ def qc_report(pass_count, min_phred_score):
     print(textwrap.dedent(print_message))
     
     
-def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None, count_t = None):
+def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None, 
+                        count_t = None, high_sensitivity_mode=False):
     '''
     Get a whitelist from all raw cell bc. If the expect number of cell is provided,
     
@@ -257,12 +259,22 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None, count_t 
     list
 
     '''
+
+    def find_knee_point(counts):
+        counts = sorted(counts)[::-1]
+        kneedle  = kneed.KneeLocator(y=np.cumsum(counts),
+                                        x = range(len(counts)),  
+                                        S=1, curve="concave", 
+                                        direction="increasing")
+        return kneedle.knee
+    
+    
     # use the threshold function in config.py
     percentile_count_thres = default_count_threshold_calculation
     
     
+    # filter BC using 10X whitelist
     whole_whitelist = []    
-    
     if full_bc_whitelist.endswith('.zip'):
         with zipfile.ZipFile(full_bc_whitelist) as zf:
             # check if there is only 1 file
@@ -281,14 +293,22 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None, count_t 
     
     raw_bc_count = {k:v for k,v in raw_bc_count.items() if k in whole_whitelist}
 
-    # plot
 
     
+
     # determine real bc based on the count threshold
     if count_t:
         knee_plot(list(raw_bc_count.values()), count_t)
         return {k:v for k,v in raw_bc_count.items() if v > count_t}
     
+    elif high_sensitivity_mode:
+        print('High-sensitivity mode: Getting knee point from the cumulative count curve...')
+        counts_array = sorted(list(raw_bc_count.values()))[::-1]
+        top_n = find_knee_point(counts_array)
+        count_threshold = counts_array[top_n]-0.5
+        knee_plot(list(raw_bc_count.values()), count_threshold)
+        return {k:v for k,v in raw_bc_count.items() if v > count_threshold}
+
     elif exp_cells:
         t = percentile_count_thres(list(raw_bc_count.values()), exp_cells)
         knee_plot(list(raw_bc_count.values()), t)

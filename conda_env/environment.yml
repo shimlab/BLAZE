@@ -1,7 +1,9 @@
+# conda config --set channel_priority true
 name: blaze
 channels:
   - bioconda
   - default
+  - conda-forge
 dependencies:
   - python=3.7
   - Biopython
@@ -10,6 +12,7 @@ dependencies:
   - numpy
   - tqdm
   - matplotlib
+  - kneed
   # - intervaltree
   # - scipy
   # - scikit-image
