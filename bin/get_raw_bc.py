@@ -261,13 +261,46 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None,
     '''
 
     def find_knee_point(counts):
+        '''
+        This funcition uses the KneeLocator function in kneed package.
+        '''
         counts = sorted(counts)[::-1]
         kneedle  = kneed.KneeLocator(y=np.cumsum(counts),
                                         x = range(len(counts)),  
                                         S=1, curve="concave", 
                                         direction="increasing")
         return kneedle.knee
-    
+
+    def getKneeDistance(values):
+        """
+        This function if modified from 
+        https://github.com/nanoporetech/sockeye/blob/master/scripts/knee_plot.py
+        """
+        import numpy.matlib as npm
+        # get coordinates of all the points
+        nPoints = len(values)
+        allCoord = np.vstack((range(nPoints), values)).T
+
+        # get the first point
+        firstPoint = allCoord[0]
+        # get vector between first and last point - this is the line
+        lineVec = allCoord[-1] - allCoord[0]
+        lineVecNorm = lineVec / np.sqrt(np.sum(lineVec ** 2))
+
+        # find the distance from each point to the line:
+        vecFromFirst = allCoord - firstPoint
+
+        scalarProduct = np.sum(vecFromFirst * npm.repmat(lineVecNorm, nPoints, 1), axis=1)
+        vecFromFirstParallel = np.outer(scalarProduct, lineVecNorm)
+        vecToLine = vecFromFirst - vecFromFirstParallel
+
+        # distance to line is the norm of vecToLine
+        distToLine = np.sqrt(np.sum(vecToLine ** 2, axis=1))
+
+        # knee/elbow is the point with max distance value
+        idxOfBestPoint = np.argmax(distToLine)
+
+        return idxOfBestPoint    
     
     # use the threshold function in config.py
     percentile_count_thres = default_count_threshold_calculation
@@ -304,7 +337,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None,
     elif high_sensitivity_mode:
         print('High-sensitivity mode: Getting knee point from the cumulative count curve...')
         counts_array = sorted(list(raw_bc_count.values()))[::-1]
-        top_n = find_knee_point(counts_array)
+        top_n = getKneeDistance(counts_array)
         count_threshold = counts_array[top_n]-0.5
         knee_plot(list(raw_bc_count.values()), count_threshold)
         return {k:v for k,v in raw_bc_count.items() if v > count_threshold}
