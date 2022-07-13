@@ -1,6 +1,5 @@
 # BLAZE (Barcode identification from Long reads for AnalyZing single cell gene Expression)
-**Important Notes:** This repo is actively being updated. Please make sure you have the latest commit. To do this, you can run `git pull` before you run the script, which may potential avoid some errors.
-
+**Important Notes:** This repo is actively being updated. Please make sure you have the latest release.
 
 ## Keywords:
 Oxford Nanopore sequencing, Demultiplexing, Single Cell, Barcode.
@@ -10,11 +9,12 @@ Combining single-cell RNA sequencing with Nanopore long-read sequencing enables 
 
 # Installation
 
+Download and unzip the [latest release](https://github.com/shimlab/BLAZE/releases/download/v1.0.0/BLAZE_v1.0.0.zip), the scripts are in `bin`. Or with command line:
 ```
-git clone https://github.com/shimlab/BLAZE.git
+wget https://github.com/shimlab/BLAZE/releases/download/v1.0.0/BLAZE_v1.0.0.zip
+unzip BLAZE_v1.0.0.zip
 cd BLAZE
 ```
-The scripts are in `bin`.
 
 ## Conda environment
 All [dependencies](#dependencies) can be installed using "conda", the configuration file can be found at `conda_env/`:
