@@ -11,7 +11,7 @@ Combining single-cell RNA sequencing with Nanopore long-read sequencing enables 
 # Installation
 
 ```
-git clone https://github.com/youyupei/BLAZE.git
+git clone https://github.com/shimlab/BLAZE.git
 cd BLAZE
 ```
 The scripts are in `bin`.
