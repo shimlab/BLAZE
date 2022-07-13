@@ -1,4 +1,6 @@
 # BLAZE (Barcode identification from Long reads for AnalyZing single cell gene Expression)
+[![Github All Releases](https://img.shields.io/github/downloads/shimlab/BLAZE/total.svg)]()
+
 **Important Notes:** This repo is actively being updated. Please make sure you have the latest release.
 
 ## Keywords:
