@@ -35,7 +35,7 @@ conda activate blaze
 * `matplotlib`
 
 ## Test run
-The following command runs BLAZE on a test data provided in `/test/data`. The expected output can be found [here](test/README.md).
+The following command runs BLAZE on a test data provided in `/test/data`. The expected output can be found [here](test/).
 ```
 bash test/test_run.sh
 ```
