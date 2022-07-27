@@ -34,6 +34,12 @@ conda activate blaze
 * `tqdm`
 * `matplotlib`
 
+## Test run
+The following command runs BLAZE on a test data provided in `/test/data`. The expected output can be found [here](test/README.md).
+```
+bash test/test_run.sh
+```
+
 # Module:
 
 ## `blaze.py`: Get putative BC and BC whitelist from fastq files
