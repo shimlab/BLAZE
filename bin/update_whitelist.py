@@ -8,7 +8,7 @@ import sys
 import os
 from tqdm import tqdm
 
-from get_raw_bc import get_bc_whitelist
+from blaze import get_bc_whitelist
 from config import *
 import helper
 
@@ -17,15 +17,15 @@ def parse_arg():
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(
         '''
-        This script can be used to generate a new whitelist from the raw_bc table
-        output from 'get_raw_bc.py'. Users may specify different argment used in 
-        'get_raw_bc.py' to obtain a different whitelist.
+        This script can be used to generate a new whitelist from the putative bc table
+        output from 'blaze.py'. Users may specify different argment used in 
+        'blaze.py' to obtain a different whitelist.
         '''),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     # Required positional argument
-    parser.add_argument('raw_bc_csv', type=str,
-                        help='Filename of the raw_bc_csv')
+    parser.add_argument('putative_bc_csv', type=str,
+                        help='Filename of the putative_bc csv file output from blaze.py')
 
     # required name argment
     requiredNamed = parser.add_argument_group('Either one of these argument is required')
@@ -45,9 +45,9 @@ def parse_arg():
     parser.add_argument('--minQ', type=int, default=15,
                         help= textwrap.dedent(
                             '''
-                            <INT>: Minimum phred score for all bases in a raw BC. 
-                            Reads whose raw BC contains one or more bases with 
-                            Q<minQ is not counted in the "Raw BC rank plot".'''))
+                            <INT>: Minimum phred score for all bases in a putative BC. 
+                            Reads whose putative BC contains one or more bases with 
+                            Q<minQ is not counted in the "Putative BC rank plot".'''))
 
     parser.add_argument('--full-bc-whitelist', type=str, default=None,
                         help='''<path to file>: .txt file containing all the possible BCs. Users may provide
@@ -89,21 +89,21 @@ def parse_arg():
             args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_V2
 
     # check file 
-    helper.check_exist([args.full_bc_whitelist, args.raw_bc_csv])
+    helper.check_exist([args.full_bc_whitelist, args.putative_bc_csv])
     return args
 
 
 
 def main(args):
     # read table
-    dfs = pd.read_csv(args.raw_bc_csv, chunksize=args.chunk_size)
+    dfs = pd.read_csv(args.putative_bc_csv, chunksize=args.chunk_size)
     
     # get bc count dict (filtered by minQ)
     
     raw_bc_count = Counter()
-    for df in tqdm(dfs, desc = 'Counting high-confidence raw BC'):
+    for df in tqdm(dfs, desc = 'Counting high-quality putative BC'):
         raw_bc_count += Counter(df[
-            df.raw_bc_min_q >=args.minQ].raw_bc.value_counts().to_dict())
+            df.putative_bc_min_q >=args.minQ].putative_bc.value_counts().to_dict())
 
     print('Preparing whitelist...')
     bc_whitelist = get_bc_whitelist(raw_bc_count,

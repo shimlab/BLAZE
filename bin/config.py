@@ -33,7 +33,7 @@ DEFAULT_GRB_WHITELIST_V2=\
         os.path.join(os.path.dirname(__file__), '../10X_bc/737K-august-2016.txt')
 
 #output
-DEFAULT_GRB_OUT_RAW_BC='raw_bc'
+DEFAULT_GRB_OUT_RAW_BC='putative_bc'
 DEFAULT_GRB_OUT_WHITELIST = 'whitelist'
 
 # defualt count threshold
