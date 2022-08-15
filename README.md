@@ -70,7 +70,7 @@ python3 blaze.py -h
    
     **Note:** col2 and 3 will be empty if no barcode is found within a read. 
 3. Cell-ranger style barcode whitelist, default filename: whitelist.csv
-4. "Barcode rank plot"" (or "knee plot") using the high-quality putative barcode.
+4. "Barcode rank plot"" (or "knee plot") using the high-quality putative barcodes.
 
 **Note:**
 1. Putative barcodes are the 16nt sequence after the identifed 10X adaptor within each read without correction for any basecalling errors.
