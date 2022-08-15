@@ -35,7 +35,7 @@ conda activate blaze
 * `matplotlib`
 
 ## Test run
-The following command runs BLAZE on a test data provided in `/test/data`. The expected output can be found [here](test/).
+The following command runs BLAZE on a test dataset provided in `/test/data`. The expected output can be found [here](test/).
 ```
 bash test/test_run.sh
 ```
@@ -68,7 +68,7 @@ python3 blaze.py -h
     * col2: putative barcode (i.e. the basecalled barcode segment in each read)
     * col3: minimum Phred score of the bases in the putative barcode
    
-    **Note:** col2 and 3 will be empty if barcode not found. 
+    **Note:** col2 and 3 will be empty if no barcode is found within a read. 
 3. Cell-ranger style barcode whitelist, default filename: whitelist.csv
 4. "Barcode rank plot"" (or "knee plot") using the high-quality putative barcode.
 
