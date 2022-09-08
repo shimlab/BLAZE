@@ -9,7 +9,7 @@
 Oxford Nanopore sequencing, Demultiplexing, Single Cell, Barcode.
 
 # Overview
-Combining single-cell RNA sequencing with Nanopore long-read sequencing enables isoform level analysis in single cells. However, due to the relatively high error rate in Nanopore reads, the demultiplexing of cell barcodes(cellBCs) and Unique molecular Identifiers (UMIs) is challenging. This tool enables the accurate identification of cellBCs solely from Nanopore reads. The output of BLAZE is a cellBC whitelist that can be utilised by downstream tools such as FLAMES to quantify genes and isoforms in single cells. 
+Combining single-cell RNA sequencing with Nanopore long-read sequencing enables isoform level analysis in single cells. However, due to the relatively high error rate in Nanopore reads, the demultiplexing of cell barcodes(cellBCs) and Unique molecular Identifiers (UMIs) is challenging. This tool enables the accurate identification of cellBCs solely from Nanopore reads. The output of BLAZE is a cellBC whitelist that can be utilised by downstream tools such as FLAMES to quantify genes and isoforms in single cells. For a detailed description of how BLAZE works and its performance across different datasets please see our [BioRxiv preprint](https://www.biorxiv.org/content/10.1101/2022.08.16.504056v1).
 
 # Installation
 
@@ -75,3 +75,16 @@ python3 blaze.py -h
 **Note:**
 1. Putative barcodes are the 16nt sequence after the identifed 10X adaptor within each read without correction for any basecalling errors.
 2. This module processes individual FASTQ files in the input folder with separate CPUs to achieve multiprocessing. This means that multiprocessing will NOT work if the input folder contains only one large FASTQ file. Splitting is recommended in this case.
+
+## Citing BLAZE
+
+If you find BLAZE useful for your work, please cite our paper:
+
+>You, Y., Prawer, Y. D., De Paoli-Iseppi, R., Hunt, C. P., Parish, C. L., Shim, H., & Clark, M. B. (2022). Identification of cell barcodes from long-read single-cell RNA-seq with BLAZE. bioRxiv.
+>[You et al. 2022](https://www.biorxiv.org/content/10.1101/2022.08.16.504056v1)
+
+
+## Data availablity
+The data underlying the article "Identification of cell barcodes from long-read single-cell RNA-seq with BLAZE" are available from ENA under accession PRJEB54718. The processed data and scripts used in this study are available at https://github.com/youyupei/bc_whitelist_analysis/.
+
+
