@@ -74,7 +74,6 @@ python3 blaze.py -h
 
 **Note:**
 1. Putative barcodes are the 16nt sequence after the identifed 10X adaptor within each read without correction for any basecalling errors.
-2. This module processes individual FASTQ files in the input folder with separate CPUs to achieve multiprocessing. This means that multiprocessing will NOT work if the input folder contains only one large FASTQ file. Splitting is recommended in this case.
 
 ## Citing BLAZE
 

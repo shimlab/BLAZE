@@ -88,14 +88,47 @@ class param:
         return check_res if not silent else True
     
 # multiprocessing
-def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1, pbar = True, *arg, **kwargs):
+# def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1, pbar = True, *arg, **kwargs):
+#     executor = concurrent.futures.ProcessPoolExecutor(n_process)
+#     if pbar:
+#         #pbar = tqdm(total=len(iterator))
+#         pbar = tqdm()
+#     futures = [executor.submit(func, i, *arg, **kwargs) for i in iterator]
+#     for future in as_completed(futures):
+#         print(111)
+#         pbar.update(1)
+#     return futures
+def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = True, *arg, **kwargs):
     executor = concurrent.futures.ProcessPoolExecutor(n_process)
+    
+    # A dictionary which will contain the  future object
+    max_queue = n_process + 10
     if pbar:
-        pbar = tqdm(total=len(iterator))
-    futures = [executor.submit(func, i, *arg, **kwargs) for i in iterator]
-    for future in as_completed(futures):
-        pbar.update(1)
-    return futures
+        pbar = tqdm()
+
+    futures = {}
+    n_job_in_queue = 0
+    while True:
+        while n_job_in_queue < max_queue:
+            i = next(iterator, None)
+            if not i:
+                break
+            futures[executor.submit(func, i, *arg, **kwargs)] = None
+            n_job_in_queue += 1
+
+        # will wait until as least one job finished
+        job = next(as_completed(futures), None)
+        
+        # no more job  
+        if job is None:
+            break
+        # otherwise
+        else:
+            n_job_in_queue -= 1
+            pbar.update(5000)
+            yield job
+            del futures[job]
+
 
 
 # check file exist
@@ -108,5 +141,18 @@ def check_exist(file_list):
     if exit_code == 1:
         sys.exit()
 
-    
-    
+# split any iterator in to batches  
+def batch_iterator(iterator, batch_size):
+    """generateor of batches of items in a iterator with batch_size.
+    """
+    batch = []
+    i=0
+    for entry in iterator:
+        i += 1
+        batch.append(entry)
+        if i == batch_size:
+            yield batch
+            batch = []
+            i = 0
+    if len(batch):
+        yield batch
