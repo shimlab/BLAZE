@@ -2,6 +2,7 @@ import numpy as np
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import multiprocessing as mp
+from pathlib import Path
 from tqdm import tqdm
 import os
 import sys
@@ -104,7 +105,7 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = Tr
     # A dictionary which will contain the  future object
     max_queue = n_process + 10
     if pbar:
-        pbar = tqdm()
+        pbar = tqdm(unit = 'read', desc='Processed')
 
     futures = {}
     n_job_in_queue = 0
@@ -125,11 +126,23 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = Tr
         # otherwise
         else:
             n_job_in_queue -= 1
-            pbar.update(5000)
+            # update pregress bar based on batch size
+            pbar.update(500)
             yield job
             del futures[job]
 
 
+# get file with a certian extensions
+def get_files(search_dir, extensions, recursive=True):
+    files = []
+    if recursive:
+        for i in extensions:
+            files.extend(Path(search_dir).rglob(i))
+        return files
+    else:
+        for i in extensions:
+            files.extend(Path(search_dir).glob(i))
+        return files
 
 # check file exist
 def check_exist(file_list):

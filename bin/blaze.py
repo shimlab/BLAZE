@@ -27,6 +27,7 @@ from matplotlib import pyplot as plt
 import zipfile
 import io
 import logging
+import gzip
 
 
 import helper
@@ -51,7 +52,12 @@ def parse_arg():
                     <INT>: Minimum phred score for all bases in a putative BC. Reads whose 
                     putative BC contains one or more bases with Q<minQ is not counted 
                     in the "Putative BC rank plot". Default: --minQ=15
-                
+
+                --high-sensitivity-mode:
+                    Turn on the sensitivity mode, which increases the sensitivity of barcode
+                    detections but potentially increase the number false/uninformative BC in
+                    the whitelist.
+
                 --kit-version:
                     Choose from v2 and v3 (for 10X Single Cell 3ʹ gene expression v2 or v3). 
                     Default: --kit_version=v3.
@@ -86,12 +92,14 @@ def parse_arg():
     kit = DEFAULT_GRB_KIT
     out_raw_bc = DEFAULT_GRB_OUT_RAW_BC
     out_whitelist = DEFAULT_GRB_OUT_WHITELIST
+    high_sensitivity_mode = False
+
     
     # Read from options
 
     try: 
         opts, args = getopt.getopt(argv[1:],"h",
-                    ["help","threads=","minQ=","full-bc-whitelist=",
+                    ["help","threads=","minQ=","full-bc-whitelist=","high-sensitivity-mode",
                      "out-putative-bc=", "out-bc-whitelist=", "expect-cells=", "kit-version="])
     except getopt.GetoptError:
         helper.err_msg("Error: Invalid argument input") 
@@ -116,6 +124,8 @@ def parse_arg():
             out_whitelist = arg 
         elif opt == "--kit-version":
             kit = arg.lower()
+        elif opt == "--high-sensitivity-mode":
+            high_sensitivity_mode = True
 
 
     if kit not in ['v2', 'v3']:
@@ -150,7 +160,8 @@ def parse_arg():
 
     # check file
     helper.check_exist([full_bc_whitelist, fastq_dir])
-    return fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist, out_raw_bc, out_whitelist
+    return fastq_dir, n_process, exp_cells ,min_phred_score, \
+            full_bc_whitelist, out_raw_bc, out_whitelist, high_sensitivity_mode
 
 # Parse fastq -> polyT_adaptor_finder.Read class
 def get_raw_bc_from_reads(reads, min_q=0):
@@ -245,7 +256,7 @@ def qc_report(pass_count, min_phred_score):
     print(textwrap.dedent(print_message))
     
     
-def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None, count_t = None):
+def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None, count_t=None, high_sensitivity_mode=False):
     """    
     Get a whitelist from all putative cell bc with high-confidence putative bc counts. 
     If the expect number is provided (default), a quantile-based threshold will be 
@@ -269,7 +280,10 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None, count_t 
     """
 
     # use the threshold function in config.py
-    percentile_count_thres = default_count_threshold_calculation
+    if high_sensitivity_mode:
+        percentile_count_thres = high_sensitivity_threshold_calculation
+    else:
+        percentile_count_thres = default_count_threshold_calculation
     
     whole_whitelist = []    
     
@@ -334,21 +348,29 @@ def read_batch_generator(fastq_fns, batch_size):
         batch_size (int, optional):  Defaults to 100.
     """
     for fn in fastq_fns:
-        fastq = Bio.SeqIO.parse(fn, "fastq")
-        read_batch = helper.batch_iterator(fastq, batch_size=batch_size)
-        for batch in read_batch:
-            yield batch
+        if str(fn).endswith('.gz'):
+            with gzip.open(fn, "rt") as handle:
+                fastq = Bio.SeqIO.parse(handle, "fastq")
+                read_batch = helper.batch_iterator(fastq, batch_size=batch_size)
+                for batch in read_batch:
+                    yield batch
+        else:
+            fastq = Bio.SeqIO.parse(fn, "fastq")
+            read_batch = helper.batch_iterator(fastq, batch_size=batch_size)
+            for batch in read_batch:
+                yield batch
 
 
 def main():
     
-    fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist, out_raw_bc, out_whitelist = parse_arg()
+    fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist,\
+        out_raw_bc, out_whitelist, high_sensitivity_mode= parse_arg()
     
     # get raw bc
-    fastq_fns = list(Path(fastq_dir).rglob('*.fastq'))
+    fastq_fns = helper.get_files(fastq_dir, ['*.fastq', '*.fq', '*.fastq.gz', '*.fg.gz'])
     print(f'Getting putative barcodes from {len(fastq_fns)} FASTQ files...')
 
-    read_batchs = read_batch_generator(fastq_fns, batch_size=5000)
+    read_batchs = read_batch_generator(fastq_fns, batch_size=500)
 
     rst_futures = helper.multiprocessing_submit(get_raw_bc_from_reads,
                                             read_batchs, n_process=n_process, min_q=min_phred_score)
@@ -379,7 +401,8 @@ def main():
     try:
         bc_whitelist = get_bc_whitelist(raw_bc_count,
                                 full_bc_whitelist, 
-                                exp_cells=exp_cells)
+                                exp_cells=exp_cells,
+                                high_sensitivity_mode=high_sensitivity_mode)
         with open(out_whitelist+'.csv', 'w') as f:
             for k in bc_whitelist.keys():
                 f.write(k+'-1\n')

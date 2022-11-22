@@ -40,3 +40,7 @@ DEFAULT_GRB_OUT_WHITELIST = 'whitelist'
 def default_count_threshold_calculation(count_array, exp_cells):
     top_count = np.sort(count_array)[::-1][:exp_cells]
     return np.quantile(top_count, 0.95)/20
+
+def high_sensitivity_threshold_calculation(count_array, exp_cells):
+    top_count = np.sort(count_array)[::-1][:exp_cells]
+    return np.quantile(top_count, 0.95)/200
