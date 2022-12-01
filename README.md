@@ -63,18 +63,36 @@ python3 blaze.py -h
 
 **Output:**
 1. Print when running: stats of the putative barcode in reads
-2. Putative barcode in each read, default filename: putative_bc.csv. It contains 3 columns
+2. Putative barcode in each read, default filename: `putative_bc.csv`. It contains 3 columns
     * col1: read id
     * col2: putative barcode (i.e. the basecalled barcode segment in each read)
     * col3: minimum Phred score of the bases in the putative barcode
    
     **Note:** col2 and 3 will be empty if no barcode is found within a read. 
-3. Cell-ranger style barcode whitelist, default filename: whitelist.csv
+3. Cell-ranger style barcode whitelist, default filename: `whitelist.csv`
 4. "Barcode rank plot"" (or "knee plot") using the high-quality putative barcodes.
 
 **Note:**
 1. Putative barcodes are the 16nt sequence after the identifed 10X adaptor within each read without correction for any basecalling errors.
 2. This module processes individual FASTQ files in the input folder with separate CPUs to achieve multiprocessing. This means that multiprocessing will NOT work if the input folder contains only one large FASTQ file. Splitting is recommended in this case.
+
+## Understand BLAZE output
+BLAZE follows the 3-step process:
+1. **Locate putative barcode in each read:**
+BLAZE first searches for putative barcode (i.e. barcode in read without error correction) by locating R1 adapter and polyT in the reads. Both the sequenced strand and  reverse complement strand are considered for each read. These putative barcodes are recorded in `putative_bc.csv` with a quanlity score (minQ). The ID of the reads that fails to locate putative barcode are still listed in the file but without the putative barcodes and minQ output.
+ 
+2. **Identify high-confidence putative barcode:**
+BLAZE filters the putative barcodes to get a list of high-confidence putative barcode using the following criteria:
+* High-confidence putative barcode should be in the 10x whitelist with exact sequence match.
+* minQ >= threshold (15 by default).
+Note: this step happens internally without a output file.
+
+3. **Generate the barcode whitelist:**
+BLAZE scans throught the list of high-confidence putative barcodes and counts the number of appearances of each unique barcode sequence.  
+Finally, BLAZE picks those unique barcodes repeatedly seem (count > a quantile-based threshold) and writes them into `whitelist.csv`.
+
+Note: Although, with the information provided, we could assign putative barcodes to whitelist by checking the edit distance. Because 
+downstream tools like FLAMES performs this assignment, we didn't reimplement it here.
 
 ## Citing BLAZE
 
