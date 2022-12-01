@@ -83,9 +83,10 @@ BLAZE first searches for putative barcode (i.e. barcode in read without error co
  
 2. **Identify high-confidence putative barcode:**
 BLAZE filters the putative barcodes to get a list of high-confidence putative barcode using the following criteria:
-* High-confidence putative barcode should be in the 10x whitelist with exact sequence match.
-* minQ >= threshold (15 by default).
-Note: this step happens internally without a output file.
+   * High-confidence putative barcode should be in the 10x whitelist with exact sequence match.
+   * minQ >= threshold (15 by default).
+   
+   Note: this step happens internally without an output file.
 
 3. **Generate the barcode whitelist:**
 BLAZE scans throught the list of high-confidence putative barcodes and counts the number of appearances of each unique barcode sequence.  
