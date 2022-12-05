@@ -150,9 +150,9 @@ def parse_arg():
     
     # check input
     fastq_dir = args[0]
-    if not os.path.isdir(fastq_dir):
-        helper.err_msg("Error: Input directory doesn't exist. Note that the input should be a directory instead of file.") 
-        sys.exit(1)
+    # if not os.path.isdir(fastq_dir):
+    #     helper.err_msg("Error: Input directory doesn't exist. Note that the input should be a directory instead of file.") 
+    #     sys.exit(1)
     if not exp_cells:
         helper.err_msg("--expect-cells is required to build the whitelist!") 
         sys.exit(1)
@@ -367,7 +367,16 @@ def main():
         out_raw_bc, out_whitelist, high_sensitivity_mode= parse_arg()
     
     # get raw bc
-    fastq_fns = helper.get_files(fastq_dir, ['*.fastq', '*.fq', '*.fastq.gz', '*.fg.gz'])
+
+    # input template file
+    if os.path.isdir(fastq_fns):
+        fastq_fns = helper.get_files(fastq_dir, ['*.fastq', '*.fq', '*.fastq.gz', '*.fg.gz'])
+    elif os.path.isfile(fastq_fns):
+        fastq_fns = [fastq_fns]
+    else:
+        helper.err_msg(f"File type of input file/dir {fastq_fns} is not supported.")
+        sys.exit(1)
+    
     print(f'Getting putative barcodes from {len(fastq_fns)} FASTQ files...')
 
     read_batchs = read_batch_generator(fastq_fns, batch_size=500)
