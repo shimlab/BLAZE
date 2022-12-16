@@ -8,9 +8,23 @@ import helper
 from config import *
 
 class Read(object):
-    '''
-    class storing all information about a read
-    '''
+    """class storing all information of read and locating the putative barcodes
+
+    Initial Attributes:
+        id: read id
+        seq: read sequence
+        phred_score: phred qscore
+        _strand: strand (transcript strand: +)
+
+    Methods:
+        add()
+            add attribute
+        find_adaptor()
+            find adaptor from a read
+        get_strand_and_raw_bc()
+
+
+    """
     def __init__(self, read_id, sequence, phred_score=None, strand = None, **kwargs):
         self.id = read_id
         self.seq = sequence
@@ -18,7 +32,6 @@ class Read(object):
         self._strand = strand
         for key in kwargs.keys():
             self.__dict__[key] = kwargs[key]
-            
             
     def add(self, attr_name, attr_val, overwrite = True):
         if attr_name in __dict__.keys() and not overwrite:
@@ -74,7 +87,7 @@ class Read(object):
 
         def check_poly_T(seq, poly_T_len=PLY_T_LEN, 
                               min_match_prop=PLY_T_MIN_MATCH_PROP):
-            '''
+            '''Find poly T in seq
             Parameters
             ----------
             seg : STR
@@ -103,7 +116,13 @@ class Read(object):
         if strand == '-':
             seq = read[:num_nt]
             
-            align = Bio.pairwise2.align.localms(seq, adaptor_seq,2,-1,-1,-1)
+            # Align adaptor sequencing to seq 
+                # no panelty for skipping the start and end of the seq
+                # score for a matched base: 2
+                # score for a mismatch : -1
+                # score for open a gap : -1
+                # score for extent a gap: -1
+            align = Bio.pairwise2.align.localms(seq, adaptor_seq, 2,-1,-1,-1)
             
             # filter out candidate adaptor when no polyT find
             adp_cand = [a for a in align if a.score >= min_score(len(adaptor_seq), min_match_prop)]
@@ -111,6 +130,7 @@ class Read(object):
             adp_cand = [a for a in adp_cand if check_poly_T(read[a.end+d1:a.end+d2])]
             return {'-':adp_cand} if len(adp_cand) else {}
         
+        # take reverse complement if read is coming from transcript strand (with ployA instead ployT)
         if strand == '+':
             read = helper.reverse_complement(read)
             adp_cand = self.find_adaptor(

@@ -1,4 +1,4 @@
-name: blaze
+name: blaze_test
 channels:
   - bioconda
   - default
@@ -10,9 +10,6 @@ dependencies:
   - numpy
   - tqdm
   - matplotlib
-  # - intervaltree
-  # - scipy
-  # - scikit-image
-  # - pip
-  # - pip:
-  #   - tables
+  - pip
+  - pip:
+    - levenshtein

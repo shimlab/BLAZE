@@ -99,13 +99,13 @@ class param:
 #         print(111)
 #         pbar.update(1)
 #     return futures
-def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = True, pbar_update=500 ,*arg, **kwargs):
+def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = True,*arg, **kwargs):
     executor = concurrent.futures.ProcessPoolExecutor(n_process)
     
     # A dictionary which will contain the  future object
     max_queue = n_process + 10
     if pbar:
-        pbar = tqdm(unit = 'read', desc='Processed')
+        pbar = tqdm(unit = 'Read', desc='Processed')
 
     futures = {}
     n_job_in_queue = 0
@@ -114,10 +114,11 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = Tr
             i = next(iterator, None)
             if not i:
                 break
-            futures[executor.submit(func, i, *arg, **kwargs)] = None
+            futures[executor.submit(func, i, *arg, **kwargs)] = len(i)
             n_job_in_queue += 1
 
         # will wait until as least one job finished
+        # batch size as value
         job = next(as_completed(futures), None)
         
         # no more job  
@@ -127,8 +128,7 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = Tr
         else:
             n_job_in_queue -= 1
             # update pregress bar based on batch size
-
-            pbar.update(pbar_update)
+            pbar.update(futures[job])
 
             yield job
             del futures[job]

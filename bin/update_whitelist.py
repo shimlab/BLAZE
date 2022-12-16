@@ -115,7 +115,7 @@ def main(args):
         print('Preparing whitelist...(high-sensitivity-mode)')
     else: 
         print('Preparing whitelist...')
-    bc_whitelist = get_bc_whitelist(raw_bc_count,
+    bc_whitelist, ept_bc = get_bc_whitelist(raw_bc_count,
                                     args.full_bc_whitelist, 
                                     args.expect_cells,
                                     args.count_threshold,
@@ -125,10 +125,18 @@ def main(args):
         with open(args.out_bc_whitelist+'.csv', 'w') as f:
             for k in bc_whitelist.keys():
                 f.write(k+'-1\n')
+        if ept_bc:
+            with open(DEFAULT_EMPTY_DROP_FN, 'w') as f:
+                for k in ept_bc:
+                    f.write(k+'-1\n')
     else:
         with open(args.out_bc_whitelist+'.csv', 'w') as f:
             for k in bc_whitelist.keys():
                 f.write(k+'\n')
+        if ept_bc:
+            with open(DEFAULT_EMPTY_DROP_FN, 'w') as f:
+                for k in ept_bc:
+                    f.write(k+'\n')
     helper.green_msg(f'Whitelist saved as {args.out_bc_whitelist}.csv!')
 if __name__ == '__main__':
     args = parse_arg()
