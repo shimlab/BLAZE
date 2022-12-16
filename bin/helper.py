@@ -2,6 +2,7 @@ import numpy as np
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import multiprocessing as mp
+from pathlib import Path
 from tqdm import tqdm
 import os
 import sys
@@ -88,15 +89,62 @@ class param:
         return check_res if not silent else True
     
 # multiprocessing
-def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1, pbar = True, *arg, **kwargs):
+# def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1, pbar = True, *arg, **kwargs):
+#     executor = concurrent.futures.ProcessPoolExecutor(n_process)
+#     if pbar:
+#         #pbar = tqdm(total=len(iterator))
+#         pbar = tqdm()
+#     futures = [executor.submit(func, i, *arg, **kwargs) for i in iterator]
+#     for future in as_completed(futures):
+#         print(111)
+#         pbar.update(1)
+#     return futures
+def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = True,*arg, **kwargs):
     executor = concurrent.futures.ProcessPoolExecutor(n_process)
+    
+    # A dictionary which will contain the  future object
+    max_queue = n_process + 10
     if pbar:
-        pbar = tqdm(total=len(iterator))
-    futures = [executor.submit(func, i, *arg, **kwargs) for i in iterator]
-    for future in as_completed(futures):
-        pbar.update(1)
-    return futures
+        pbar = tqdm(unit = 'Read', desc='Processed')
 
+    futures = {}
+    n_job_in_queue = 0
+    while True:
+        while n_job_in_queue < max_queue:
+            i = next(iterator, None)
+            if not i:
+                break
+            futures[executor.submit(func, i, *arg, **kwargs)] = len(i)
+            n_job_in_queue += 1
+
+        # will wait until as least one job finished
+        # batch size as value
+        job = next(as_completed(futures), None)
+        
+        # no more job  
+        if job is None:
+            break
+        # otherwise
+        else:
+            n_job_in_queue -= 1
+            # update pregress bar based on batch size
+            pbar.update(futures[job])
+
+            yield job
+            del futures[job]
+
+
+# get file with a certian extensions
+def get_files(search_dir, extensions, recursive=True):
+    files = []
+    if recursive:
+        for i in extensions:
+            files.extend(Path(search_dir).rglob(i))
+        return files
+    else:
+        for i in extensions:
+            files.extend(Path(search_dir).glob(i))
+        return files
 
 # check file exist
 def check_exist(file_list):
@@ -108,5 +156,18 @@ def check_exist(file_list):
     if exit_code == 1:
         sys.exit()
 
-    
-    
+# split any iterator in to batches  
+def batch_iterator(iterator, batch_size):
+    """generateor of batches of items in a iterator with batch_size.
+    """
+    batch = []
+    i=0
+    for entry in iterator:
+        i += 1
+        batch.append(entry)
+        if i == batch_size:
+            yield batch
+            batch = []
+            i = 0
+    if len(batch):
+        yield batch

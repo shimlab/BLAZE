@@ -57,6 +57,10 @@ def parse_arg():
                         help='''<filename_prefix>: Output the whitelist identified from all the reads.''')
     parser.add_argument('--cr-style', type=bool, nargs='?',const=True, default=True,
                         help='Output the whitelist in Cellranger style')
+    parser.add_argument('--high-sensitivity-mode', action='store_true',
+                        help='''Turn on the sensitivity mode, which increases the sensitivity of barcode
+                    detections but potentially increase the number false/uninformative BC in
+                    the whitelist.''')
     parser.add_argument('--chunk-size', type=int, default=1_000_000,
                         help='Chunksize when reading the input file. Please use'
                         'smaller number if memory is not sufficient.')
@@ -66,12 +70,14 @@ def parse_arg():
     if not args.expect_cells and not args.count_threshold:
         helper.err_msg("Missing argument --expect-cells or --count-threshold.") 
         sys.exit(1)
-    if args.expect_cells and args.count_threshold:
+    if (args.expect_cells or args.high_sensitivity_mode) and args.count_threshold:
         helper.warning_msg(textwrap.dedent(
                 f'''
-                Warning: You have specified both '--expect-cells' and '--count-threshold'. \
-'--expect-cells' will be ignored.                
+                Warning: You have specified'--count-threshold'. Options
+                "--high_sensitivity_mode" and "--expect-cells" would be ignored if
+                specified.        
                 '''))
+        args.high_sensitivity_mode = False
     
     args.kit_version = args.kit_version.lower()
     if args.kit_version not in ['v2', 'v3']:
@@ -105,20 +111,32 @@ def main(args):
         raw_bc_count += Counter(df[
             df.putative_bc_min_q >=args.minQ].putative_bc.value_counts().to_dict())
 
-    print('Preparing whitelist...')
-    bc_whitelist = get_bc_whitelist(raw_bc_count,
+    if args.high_sensitivity_mode:
+        print('Preparing whitelist...(high-sensitivity-mode)')
+    else: 
+        print('Preparing whitelist...')
+    bc_whitelist, ept_bc = get_bc_whitelist(raw_bc_count,
                                     args.full_bc_whitelist, 
                                     args.expect_cells,
-                                    args.count_threshold)
+                                    args.count_threshold,
+                                    args.high_sensitivity_mode)
 
     if args.cr_style:
         with open(args.out_bc_whitelist+'.csv', 'w') as f:
             for k in bc_whitelist.keys():
                 f.write(k+'-1\n')
+        if ept_bc:
+            with open(DEFAULT_EMPTY_DROP_FN, 'w') as f:
+                for k in ept_bc:
+                    f.write(k+'-1\n')
     else:
         with open(args.out_bc_whitelist+'.csv', 'w') as f:
             for k in bc_whitelist.keys():
                 f.write(k+'\n')
+        if ept_bc:
+            with open(DEFAULT_EMPTY_DROP_FN, 'w') as f:
+                for k in ept_bc:
+                    f.write(k+'\n')
     helper.green_msg(f'Whitelist saved as {args.out_bc_whitelist}.csv!')
 if __name__ == '__main__':
     args = parse_arg()

@@ -10,9 +10,6 @@ dependencies:
   - numpy
   - tqdm
   - matplotlib
-  # - intervaltree
-  # - scipy
-  # - scikit-image
-  # - pip
-  # - pip:
-  #   - tables
+  - pip
+  - pip:
+    - levenshtein

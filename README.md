@@ -34,6 +34,7 @@ conda activate blaze
 * `numpy`
 * `tqdm`
 * `matplotlib`
+* `levenshtein`
 
 ## Test run
 The following command runs BLAZE on a test dataset provided in `/test/data`. The expected output can be found [here](test/).
@@ -75,7 +76,6 @@ python3 blaze.py -h
 
 **Note:**
 1. Putative barcodes are the 16nt sequence after the identifed 10X adaptor within each read without correction for any basecalling errors.
-2. This module processes individual FASTQ files in the input folder with separate CPUs to achieve multiprocessing. This means that multiprocessing will NOT work if the input folder contains only one large FASTQ file. Splitting is recommended in this case.
 
 ## Understand BLAZE output
 BLAZE follows the 3-step process:
@@ -106,5 +106,4 @@ If you find BLAZE useful for your work, please cite our paper:
 
 ## Data availablity
 The data underlying the article "Identification of cell barcodes from long-read single-cell RNA-seq with BLAZE" are available from ENA under accession PRJEB54718. The processed data and scripts used in this study are available at https://github.com/youyupei/bc_whitelist_analysis/.
-
 

@@ -27,7 +27,11 @@ from matplotlib import pyplot as plt
 import zipfile
 import io
 import logging
+import gzip
+from Levenshtein import distance as edit_distance
 
+# test
+import psutil
 
 import helper
 from config import *
@@ -51,7 +55,14 @@ def parse_arg():
                     <INT>: Minimum phred score for all bases in a putative BC. Reads whose 
                     putative BC contains one or more bases with Q<minQ is not counted 
                     in the "Putative BC rank plot". Default: --minQ=15
-                
+
+                --high-sensitivity-mode:
+                    Turn on the sensitivity mode, which increases the sensitivity of barcode
+                    detections but potentially increase the number false/uninformative BC in
+                    the whitelist. In this mode, a list of BCs corresponding to empty droplets
+                    will also be produced autimatically (filename: {DEFAULT_EMPTY_DROP_FN}), which
+                    might be useful in downstream analysis.
+
                 --kit-version:
                     Choose from v2 and v3 (for 10X Single Cell 3ʹ gene expression v2 or v3). 
                     Default: --kit_version=v3.
@@ -71,6 +82,11 @@ def parse_arg():
                 
                 --threads
                     <INT>: Number of threads used <default: # of available cpus - 1>
+
+                --batch-size
+                    <INT>: Number of reads this program process together as a batch. Not that if 
+                    the specified number larger than the number of reads in each fastq files, the 
+                    batch size will be forced to be the number of reads in the file. <Default: 1000>
                                         
             '''
         print(textwrap.dedent(help_message))
@@ -86,13 +102,17 @@ def parse_arg():
     kit = DEFAULT_GRB_KIT
     out_raw_bc = DEFAULT_GRB_OUT_RAW_BC
     out_whitelist = DEFAULT_GRB_OUT_WHITELIST
+    high_sensitivity_mode = False
+    batch_size=1000
+
     
     # Read from options
 
     try: 
         opts, args = getopt.getopt(argv[1:],"h",
-                    ["help","threads=","minQ=","full-bc-whitelist=",
-                     "out-putative-bc=", "out-bc-whitelist=", "expect-cells=", "kit-version="])
+                    ["help","threads=","minQ=","full-bc-whitelist=","high-sensitivity-mode",
+                     "out-putative-bc=", "out-bc-whitelist=", "expect-cells=", 
+                     "kit-version=", "batch-size="])
     except getopt.GetoptError:
         helper.err_msg("Error: Invalid argument input") 
         print_help()
@@ -116,8 +136,11 @@ def parse_arg():
             out_whitelist = arg 
         elif opt == "--kit-version":
             kit = arg.lower()
-
-
+        elif opt == "--high-sensitivity-mode":
+            high_sensitivity_mode = True
+        elif opt == "--batch-size":
+            batch_size = int(arg)
+            
     if kit not in ['v2', 'v3']:
         helper.err_msg("Error: Invalid value of --kit-version, please choose from v3 or v2") 
         sys.exit()
@@ -132,8 +155,6 @@ def parse_arg():
         elif kit == 'v2':
             full_bc_whitelist = DEFAULT_GRB_WHITELIST_V2
 
-    
-
     # Read from args
     if not args:
         helper.err_msg("Error: Missing fastq directory.")   
@@ -142,9 +163,9 @@ def parse_arg():
     
     # check input
     fastq_dir = args[0]
-    if not os.path.isdir(fastq_dir):
-        helper.err_msg("Error: Input directory doesn't exist. Note that the input should be a directory instead of file.") 
-        sys.exit(1)
+    # if not os.path.isdir(fastq_dir):
+    #     helper.err_msg("Error: Input directory doesn't exist. Note that the input should be a directory instead of file.") 
+    #     sys.exit(1)
     if not exp_cells:
         helper.err_msg("--expect-cells is required to build the whitelist!") 
         sys.exit(1)
@@ -152,41 +173,50 @@ def parse_arg():
 
     # check file
     helper.check_exist([full_bc_whitelist, fastq_dir])
-    return fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist, out_raw_bc, out_whitelist
-
-
+    return fastq_dir, n_process, exp_cells ,min_phred_score, \
+            full_bc_whitelist, out_raw_bc, out_whitelist, \
+            high_sensitivity_mode, batch_size
 
 # Parse fastq -> polyT_adaptor_finder.Read class
-def get_raw_bc_from_fastq(fn, min_q=0):
+def get_raw_bc_from_reads(reads, min_q=0):
     """
-    Get putative BC from each reads from fastq file
+    Get putative BC from each reads from a batch of read (can be defined by batch_iterator function)
+
 
     Parameters
     ----------
-    fn : STR
-        filename of the fastq.
+    reads : LIST
+        list of reads entry in Bio.SeqIO.parse
     min_q: INT
         Only count putative bc with minimum value specified
     save_putative_bc: STR
         Output filename for the putative BCs. Will not output anything by default
     Returns
     -------
-    None.
-
+    1. Counter of high-confidence putative BC
+    2. Counter of high-confidence putative BC
+    3. pd.DataFrame containing all putative BCs 
     """
-
-    
-    read_list = []
+    # init
+    read_ids = []
+    putative_bcs = []
+    putative_bc_min_qs = []
     raw_bc = []
     raw_bc_pass = []
-    # raw_bc_count = Counter([])
-    # raw_bc_pass_count = Counter([])
-    fastq = Bio.SeqIO.parse(fn, "fastq")
-    for i,r in enumerate(fastq):
+
+    for i,r in enumerate(reads):
+        
+        # create read object 
         read = Read(read_id = r.id, sequence=str(r.seq), 
-                    phred_score=r.letter_annotations['phred_quality'], fastq_name=fn)        
+                    phred_score=r.letter_annotations['phred_quality'])    
+        
+
         read.get_strand_and_raw_bc()
-        read_list.append(read)
+        read_ids.append(read.id)
+        putative_bcs.append(read.raw_bc)
+        putative_bc_min_qs.append(read.raw_bc_min_q)
+
+        
         if read.raw_bc_min_q and read.raw_bc_min_q >= min_q:     
             raw_bc.append(read.raw_bc)
             
@@ -198,16 +228,16 @@ def get_raw_bc_from_fastq(fn, min_q=0):
     # raw_bc_pass_count += Counter(raw_bc_pass)
     
     rst_df = pd.DataFrame(
-        {'read_id': [r.id for r in read_list],
-         'putative_bc': [r.raw_bc for r in read_list],
-         'putative_bc_min_q': [r.raw_bc_min_q for r in read_list]
-            }
+        {'read_id': read_ids,
+         'putative_bc': putative_bcs,
+         'putative_bc_min_q': putative_bc_min_qs
+        }
         )
     return Counter(raw_bc), Counter(raw_bc_pass), rst_df
 
-
 def qc_report(pass_count, min_phred_score):
     '''
+    Generate report for the putative barcode detection.
     Print stats for 
         a. # of input read in total (only look at primary alignment if it's BAM)
         b. # and % read pass the polyT and adaptor searching process.
@@ -240,29 +270,48 @@ def qc_report(pass_count, min_phred_score):
     print(textwrap.dedent(print_message))
     
     
-def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None, count_t = None):
-    '''
-    Get a whitelist from all putative cell bc. If the expect number of cell is provided,
+def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None, count_t=None, high_sensitivity_mode=False):
+    f"""    
+    Get a whitelist from all putative cell bc with high-confidence putative bc counts. 
+    If the expect number is provided (default), a quantile-based threshold will be 
+    calculated to determine the exact cells to be output. Otherwise, a user-specified 
+    ount threshold will be used and the cells/Barocdes with counts above the threshold will be output.
     
+    If in high_sensitivity_mode, a list of BCs that are most likely corresponding to 
+    empty droplets will also be produced autimatically , which might be useful in 
+    downstream analysis.
+        Criteria of selecting these BC:
+            1. BC in 10x full whitelist, and
+            2. At least {DEFAULT_EMPTY_DROP_MIN_ED} away from all selected cell-associated BCs. and
+            3. Read count is at most {DEFAULT_EMPTY_DROP_MAX_COUNT_RATIO} of any cell-associated BCs.
 
-    Parameters
-    ----------
-    raw_bc_count : TYPE
-        DESCRIPTION.
-    exp_cell : TYPE, optional
-        DESCRIPTION. The default is None.
 
-    Returns
-    -------
-    list
+    Args:
+        raw_bc_count (Counter): high-confidence putative BC counts for each unique BC
+        full_bc_whitelist (str): filename of the 10X whitelist
+        exp_cells (int, optional): expected number of cell. Defaults to None.
+        count_t (int, optional): count threshold. Defaults to None.
 
-    '''
+    Raises:
+        ValueError: No valid exp_cells or count_t specified
+
+    Returns:
+        dict 1: 
+            key: barcodes selected
+            values: high-confidence putative BC counts
+       
+        list  (high_sensitivity_mode only):
+            barcodes most likely associated to empty droplet
+    """
+
     # use the threshold function in config.py
-    percentile_count_thres = default_count_threshold_calculation
-    
+    if high_sensitivity_mode:
+        percentile_count_thres = high_sensitivity_threshold_calculation
+    else:
+        percentile_count_thres = default_count_threshold_calculation
     
     whole_whitelist = []    
-    
+
     if full_bc_whitelist.endswith('.zip'):
         with zipfile.ZipFile(full_bc_whitelist) as zf:
             # check if there is only 1 file
@@ -278,25 +327,52 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells = None, count_t 
                 whole_whitelist.append(line.strip())
     
     whole_whitelist = set(whole_whitelist)
-    
+
     raw_bc_count = {k:v for k,v in raw_bc_count.items() if k in whole_whitelist}
-
-    # plot
-
     
     # determine real bc based on the count threshold
     if count_t:
         knee_plot(list(raw_bc_count.values()), count_t)
-        return {k:v for k,v in raw_bc_count.items() if v > count_t}
+        cells_bc = {k:v for k,v in raw_bc_count.items() if v > count_t}
+        return cells_bc, []
     
     elif exp_cells:
         t = percentile_count_thres(list(raw_bc_count.values()), exp_cells)
         knee_plot(list(raw_bc_count.values()), t)
-        return {k:v for k,v in raw_bc_count.items() if v > t}
+
+        cells_bc = {k:v for k,v in raw_bc_count.items() if v > t}
+        
+        if not high_sensitivity_mode:
+            return cells_bc, []
+        
+        # create a confident list of empty drops in high sensitivity mode
+        ept_bc = []
+        ept_bc_max_count = \
+            min(cells_bc.values()) * DEFAULT_EMPTY_DROP_MAX_COUNT_RATIO
+        ept_bc_candidate = \
+            [k for k,v in raw_bc_count.items() if v < ept_bc_max_count]
+        for k in ept_bc_candidate:
+            if min([edit_distance(k, x) for x in cells_bc.keys()]) >= DEFAULT_EMPTY_DROP_MIN_ED:
+                ept_bc.append(k)
+
+            # we don't need too much BC in this list
+            if len(ept_bc) >  DEFAULT_EMPTY_DROP_NUM:
+                break
+        return cells_bc, ept_bc
+
+        
+
     else: 
         raise ValueError('Invalid value of count_t and/or exp_cells.')
-   
+
 def knee_plot(counts, threshold=None):
+    """
+    Plot knee plot using the high-confidence putative BC counts
+
+    Args:
+        counts (list): high-confidence putative BC countstion_
+        threshold (int, optional): a line to show the count threshold. Defaults to None.
+    """
     counts = sorted(counts)[::-1]
     plt.figure(figsize=(8, 8))
     plt.title(f'Barcode rank plot (from high-quality putative BC)')
@@ -312,29 +388,63 @@ def knee_plot(counts, threshold=None):
     plt.savefig(out_fn + '.png')
 
 
- 
+def read_batch_generator(fastq_fns, batch_size):
+    """Generator of barches of reads from list of fastq files
+
+    Args:
+        fastq_fns (list): fastq filenames
+        batch_size (int, optional):  Defaults to 100.
+    """
+    for fn in fastq_fns:
+        if str(fn).endswith('.gz'):
+            with gzip.open(fn, "rt") as handle:
+                fastq = Bio.SeqIO.parse(handle, "fastq")
+                read_batch = helper.batch_iterator(fastq, batch_size=batch_size)
+                for batch in read_batch:
+                    yield batch
+        else:
+            fastq = Bio.SeqIO.parse(fn, "fastq")
+            read_batch = helper.batch_iterator(fastq, batch_size=batch_size)
+            for batch in read_batch:
+                yield batch
+
+
 def main():
-    fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist, out_raw_bc, out_whitelist = parse_arg()
+    
+    fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist,\
+        out_raw_bc, out_whitelist, high_sensitivity_mode, batch_size = parse_arg()
     
     # get raw bc
-    fastq_fns = list(Path(fastq_dir).rglob('*.fastq'))
+    # input template file
+    if os.path.isdir(fastq_dir):
+        fastq_fns = helper.get_files(fastq_dir, ['*.fastq', '*.fq', '*.fastq.gz', '*.fg.gz'])
+    elif os.path.isfile(fastq_dir):
+        fastq_fns = [fastq_dir]
+    else:
+        helper.err_msg(f"File type of input file/dir {fastq_fns} is not supported.")
+        sys.exit(1)
+
     print(f'Getting putative barcodes from {len(fastq_fns)} FASTQ files...')
-    rst_futures = helper.multiprocessing_submit(get_raw_bc_from_fastq,
-                                                fastq_fns, n_process=n_process, min_q=min_phred_score)
-    
+
+    read_batchs = read_batch_generator(fastq_fns, batch_size=batch_size)
+
+    rst_futures = helper.multiprocessing_submit(get_raw_bc_from_reads,
+                                            read_batchs, n_process=n_process, 
+                                            min_q=min_phred_score)
+
     raw_bc_count = Counter([])
     raw_bc_pass_count = Counter([])    
     rst_dfs = []
-    for f in rst_futures:
-        count_bc, count_pass, rst_df = f.result()
+    for idx, f in enumerate(rst_futures):
+        count_bc, count_pass, rst_df = f.result() #write rst_df out
+
         raw_bc_count += count_bc
         raw_bc_pass_count += count_pass
-        rst_dfs.append(rst_df)
-    rst_df = pd.concat(rst_dfs)
+        if idx == 0:
+            rst_df.to_csv(out_raw_bc+'.csv', index=False)
+        else:
+            rst_df.to_csv(out_raw_bc+'.csv', mode='a', index=False, header=False)
     
-    print('\nPreparing putative barcode table...')
-    if out_raw_bc:
-        rst_df.to_csv(out_raw_bc+'.csv', index=False)
     helper.green_msg(f'Putative barcode table saved in {out_raw_bc}.csv')
     
     # output
@@ -347,12 +457,19 @@ def main():
     logger = logging.getLogger()
 
     try:
-        bc_whitelist = get_bc_whitelist(raw_bc_count,
+        bc_whitelist, ept_bc = get_bc_whitelist(raw_bc_count,
                                 full_bc_whitelist, 
-                                exp_cells=exp_cells)
+                                exp_cells=exp_cells,
+                                high_sensitivity_mode=high_sensitivity_mode)
         with open(out_whitelist+'.csv', 'w') as f:
             for k in bc_whitelist.keys():
                 f.write(k+'-1\n')
+
+        if len(ept_bc):
+            with open(DEFAULT_EMPTY_DROP_FN, 'w') as f:
+                for k in ept_bc:
+                    f.write(k+'-1\n')
+
     except Exception as e:
         logger.exception(e)
         helper.err_msg(
@@ -363,8 +480,6 @@ def main():
             )
     else:
         helper.green_msg(f'Whitelist saved as {out_whitelist}.csv!')
-        
-
 
 if __name__ == '__main__':
     main()
