@@ -303,8 +303,8 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None,
     downstream analysis.
         Criteria of selecting these BC:
             1. BC in 10x full whitelist, and
-            2. At least {DEFAULT_EMPTY_DROP_MIN_ED} away from all selected cell-associated BCs in HS mode. and
-            3. BC selected as empty droplets should below a certain high-confidence putative barcode countd (empty_max_count)
+            2. At least {DEFAULT_EMPTY_DROP_MIN_ED} away from all selected cell-associated BCs in whitelist. and
+            3. BC selected as empty droplets should below a certain high-confidence putative barcode count (empty_max_count)
 
     Args:
         raw_bc_count (Counter): high-confidence putative BC counts for each unique BC
