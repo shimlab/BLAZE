@@ -5,9 +5,5 @@
 # search for putative barcode in each read and obtain the whitelist
 python3 ../bin/blaze.py --expect-cells=500 --threads=12 data/
 
-
-# update the whitelist use a customised count threhold 
-python3 ../bin/update_whitelist.py --count-threshold=50  --out-bc-whitelist=whitelist_update putative_bc.csv
-
-# update the whitelist use a customised count threhold
-python3 ../bin/update_whitelist.py --count-threshold=50  --out-bc-whitelist=whitelist_high_sensitivity --high-sensitivity-mode putative_bc.csv
+# update the whitelist to obtain a whitelist in high-confidece mode 
+python3 ../bin/update_whitelist.py --expect-cells 500 --high-sensitivity-mode --emptydrop --out-bc-whitelist=whitelist_hs putative_bc.csv

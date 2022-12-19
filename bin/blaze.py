@@ -30,9 +30,6 @@ import logging
 import gzip
 from Levenshtein import distance as edit_distance
 
-# test
-import psutil
-
 import helper
 from config import *
 from polyT_adaptor_finder import Read
@@ -48,46 +45,57 @@ def parse_arg():
                 -h, --help
                     Print this help message.
                 
-                --expect-cells (required in current version)
-                    <INT>:  Expected number of cells. Default: not specified
+                --expect-cells <INT> (required in current version)
+                    Expected number of cells. Default: not specified
                 
-                --minQ:
-                    <INT>: Minimum phred score for all bases in a putative BC. Reads whose 
-                    putative BC contains one or more bases with Q<minQ is not counted 
+                --kit-version <v2 or v3>:
+                    Choose from 10X Single Cell 3ʹ gene expression v2 or v3. 
+                    Default: --kit_version v3.
+                
+                --minQ <INT>:
+                    Putative BC contains one or more bases with Q<minQ is not counted 
                     in the "Putative BC rank plot". Default: --minQ=15
+                
+                --threads <INT>
+                    <INT>: Number of threads used <default: # of available cpus - 1>
+
+                --batch-size <INT>
+                    <INT>: Number of reads this program process together as a batch. Not that if 
+                    the specified number larger than the number of reads in each fastq files, the 
+                    batch size will be forced to be the number of reads in the file. <Default: 1000>
+                
+                --full-bc-whitelist <path to file>
+                    txt file containing all the possible BCs. You may provide your own whitelist. 
+                    No need to specify this if users want to use the 10X whilelist. The correct 
+                    version of 10X whilelist will be determined based on 10X kit version.
+                
+                --out-putative-bc <filename_prefix>
+                    Output a csv file for the putative BC in each read. 
+                    Default: --out-putative-bc=putative_bc
+                
+                --out-bc-whitelist <filename_prefix>
+                    Output the whitelist identified from all the reads. 
+                    Default: --out-bc-whitelist=whitelist
+
+            High sensitivity mode:
 
                 --high-sensitivity-mode:
                     Turn on the sensitivity mode, which increases the sensitivity of barcode
                     detections but potentially increase the number false/uninformative BC in
-                    the whitelist. In this mode, a list of BCs corresponding to empty droplets
-                    will also be produced autimatically (filename: {DEFAULT_EMPTY_DROP_FN}), which
-                    might be useful in downstream analysis.
+                    the whitelist. 
+                    Note that --emptydrop is recommanded specified with this mode (See details below).
 
-                --kit-version:
-                    Choose from v2 and v3 (for 10X Single Cell 3ʹ gene expression v2 or v3). 
-                    Default: --kit_version=v3.
+            Empty droplet BCs
+                --emptydrop
+                    Output list of BCs corresponding to empty droplets (filename: {DEFAULT_EMPTY_DROP_FN}), 
+                    which could be used to estimate ambiant RNA expressionprofile.
+                
+                --emptydrop-max-count <INT>
+                    Only select barcodes supported by a maximum number of high-confidence
+                    putative barcode count. (Default: Inf, i.e. no maximum number is set
+                    and any barcodes with ED>= {DEFAULT_EMPTY_DROP_MIN_ED} to the barcodes
+                    in whitelist can be selected as empty droplets)
 
-                --full-bc-whitelist=
-                    <path to file>: .txt file containing all the possible BCs. Users may provide
-                    their own whitelist. No need to specify this if users want to use the 10X whilelist. 
-                    The correct version of 10X whilelist will be determined based on 10X kit version.
-                
-                --out-putative-bc
-                    <filename_prefix>: Output a csv file for the putative BC in each read. 
-                                        Default: --out-putative-bc=putative_bc
-                
-                --out-bc-whitelist
-                    <filename_prefix>: Output the whitelist identified from all the reads. 
-                                        Default: --out-bc-whitelist=whitelist
-                
-                --threads
-                    <INT>: Number of threads used <default: # of available cpus - 1>
-
-                --batch-size
-                    <INT>: Number of reads this program process together as a batch. Not that if 
-                    the specified number larger than the number of reads in each fastq files, the 
-                    batch size will be forced to be the number of reads in the file. <Default: 1000>
-                                        
             '''
         print(textwrap.dedent(help_message))
    
@@ -102,17 +110,20 @@ def parse_arg():
     kit = DEFAULT_GRB_KIT
     out_raw_bc = DEFAULT_GRB_OUT_RAW_BC
     out_whitelist = DEFAULT_GRB_OUT_WHITELIST
-    high_sensitivity_mode = False
     batch_size=1000
 
-    
+    high_sensitivity_mode = False   
+
+    emptydrop = False
+    emptydrop_max_count = np.inf
+
     # Read from options
 
     try: 
         opts, args = getopt.getopt(argv[1:],"h",
                     ["help","threads=","minQ=","full-bc-whitelist=","high-sensitivity-mode",
                      "out-putative-bc=", "out-bc-whitelist=", "expect-cells=", 
-                     "kit-version=", "batch-size="])
+                     "kit-version=", "batch-size=", "emptydrop", "emptydrop-max-count="])
     except getopt.GetoptError:
         helper.err_msg("Error: Invalid argument input") 
         print_help()
@@ -138,8 +149,13 @@ def parse_arg():
             kit = arg.lower()
         elif opt == "--high-sensitivity-mode":
             high_sensitivity_mode = True
+            #emptydrop = True
         elif opt == "--batch-size":
             batch_size = int(arg)
+        elif opt == "--emptydrop":
+            emptydrop = True
+        elif opt == "--emptydrop-max-count":
+            emptydrop_max_count = int(arg)
             
     if kit not in ['v2', 'v3']:
         helper.err_msg("Error: Invalid value of --kit-version, please choose from v3 or v2") 
@@ -175,7 +191,7 @@ def parse_arg():
     helper.check_exist([full_bc_whitelist, fastq_dir])
     return fastq_dir, n_process, exp_cells ,min_phred_score, \
             full_bc_whitelist, out_raw_bc, out_whitelist, \
-            high_sensitivity_mode, batch_size
+            high_sensitivity_mode, batch_size, emptydrop, emptydrop_max_count
 
 # Parse fastq -> polyT_adaptor_finder.Read class
 def get_raw_bc_from_reads(reads, min_q=0):
@@ -270,21 +286,25 @@ def qc_report(pass_count, min_phred_score):
     print(textwrap.dedent(print_message))
     
     
-def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None, count_t=None, high_sensitivity_mode=False):
+def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None, 
+                    count_t=None, high_sensitivity_mode=False, 
+                    output_empty = False, empty_max_count = np.inf):
     f"""    
     Get a whitelist from all putative cell bc with high-confidence putative bc counts. 
     If the expect number is provided (default), a quantile-based threshold will be 
     calculated to determine the exact cells to be output. Otherwise, a user-specified 
     ount threshold will be used and the cells/Barocdes with counts above the threshold will be output.
     
-    If in high_sensitivity_mode, a list of BCs that are most likely corresponding to 
+    If high_sensitivity_mode = True, the high sensitivity (HS) mode is turned on which uses
+    more relaxed threshold  
+
+    If in output_empty=True, a list of BCs that are most likely corresponding to 
     empty droplets will also be produced autimatically , which might be useful in 
     downstream analysis.
         Criteria of selecting these BC:
             1. BC in 10x full whitelist, and
-            2. At least {DEFAULT_EMPTY_DROP_MIN_ED} away from all selected cell-associated BCs. and
-            3. Read count is at most {DEFAULT_EMPTY_DROP_MAX_COUNT_RATIO} of any cell-associated BCs.
-
+            2. At least {DEFAULT_EMPTY_DROP_MIN_ED} away from all selected cell-associated BCs in HS mode. and
+            3. BC selected as empty droplets should below a certain high-confidence putative barcode countd (empty_max_count)
 
     Args:
         raw_bc_count (Counter): high-confidence putative BC counts for each unique BC
@@ -334,33 +354,50 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None, count_t=No
     if count_t:
         knee_plot(list(raw_bc_count.values()), count_t)
         cells_bc = {k:v for k,v in raw_bc_count.items() if v > count_t}
-        return cells_bc, []
-    
+
+        if not output_empty:
+            return cells_bc, []
+        else:
+            # create a confident list of empty drops in high sensitivity mode
+            print("Creating emtpy droplets barocde list...")
+            ept_bc = []
+            ept_bc_max_count = min(cells_bc.values())
+            ept_bc_max_count = min(ept_bc_max_count, empty_max_count)
+            ept_bc_candidate = \
+                [k for k,v in raw_bc_count.items() if v < ept_bc_max_count]
+            for k in ept_bc_candidate:
+                if min([edit_distance(k, x) for x in cells_bc.keys()]) >= DEFAULT_EMPTY_DROP_MIN_ED:
+                    ept_bc.append(k)
+
+                # we don't need too much BC in this list
+                if len(ept_bc) >  DEFAULT_EMPTY_DROP_NUM:
+                    break      
+            return cells_bc, ept_bc
+
     elif exp_cells:
         t = percentile_count_thres(list(raw_bc_count.values()), exp_cells)
         knee_plot(list(raw_bc_count.values()), t)
 
         cells_bc = {k:v for k,v in raw_bc_count.items() if v > t}
         
-        if not high_sensitivity_mode:
+        if not output_empty:
             return cells_bc, []
-        
-        # create a confident list of empty drops in high sensitivity mode
-        ept_bc = []
-        ept_bc_max_count = \
-            min(cells_bc.values()) * DEFAULT_EMPTY_DROP_MAX_COUNT_RATIO
-        ept_bc_candidate = \
-            [k for k,v in raw_bc_count.items() if v < ept_bc_max_count]
-        for k in ept_bc_candidate:
-            if min([edit_distance(k, x) for x in cells_bc.keys()]) >= DEFAULT_EMPTY_DROP_MIN_ED:
-                ept_bc.append(k)
+        else:
+            # create a confident list of empty drops in high sensitivity mode
+            print("Creating emtpy droplets barocde list...")
+            ept_bc = []
+            ept_bc_max_count = min(cells_bc.values())
+            ept_bc_max_count = min(ept_bc_max_count, empty_max_count)
+            ept_bc_candidate = \
+                [k for k,v in raw_bc_count.items() if v < ept_bc_max_count]
+            for k in ept_bc_candidate:
+                if min([edit_distance(k, x) for x in cells_bc.keys()]) >= DEFAULT_EMPTY_DROP_MIN_ED:
+                    ept_bc.append(k)
 
-            # we don't need too much BC in this list
-            if len(ept_bc) >  DEFAULT_EMPTY_DROP_NUM:
-                break
-        return cells_bc, ept_bc
-
-        
+                # we don't need too much BC in this list
+                if len(ept_bc) >  DEFAULT_EMPTY_DROP_NUM:
+                    break
+            return cells_bc, ept_bc
 
     else: 
         raise ValueError('Invalid value of count_t and/or exp_cells.')
@@ -412,7 +449,8 @@ def read_batch_generator(fastq_fns, batch_size):
 def main():
     
     fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist,\
-        out_raw_bc, out_whitelist, high_sensitivity_mode, batch_size = parse_arg()
+        out_raw_bc, out_whitelist, high_sensitivity_mode, \
+        batch_size, emptydrop, emptydrop_max_count = parse_arg()
     
     # get raw bc
     # input template file
@@ -455,12 +493,14 @@ def main():
     print("Getting whitelist...\n")
     
     logger = logging.getLogger()
-
+    
     try:
         bc_whitelist, ept_bc = get_bc_whitelist(raw_bc_count,
                                 full_bc_whitelist, 
                                 exp_cells=exp_cells,
-                                high_sensitivity_mode=high_sensitivity_mode)
+                                high_sensitivity_mode=high_sensitivity_mode,
+                                output_empty=emptydrop,
+                                empty_max_count=emptydrop_max_count)
         with open(out_whitelist+'.csv', 'w') as f:
             for k in bc_whitelist.keys():
                 f.write(k+'-1\n')
@@ -469,6 +509,9 @@ def main():
             with open(DEFAULT_EMPTY_DROP_FN, 'w') as f:
                 for k in ept_bc:
                     f.write(k+'-1\n')
+            helper.green_msg(f'Whitelist saved as {DEFAULT_EMPTY_DROP_FN}.')
+
+            
 
     except Exception as e:
         logger.exception(e)

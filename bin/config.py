@@ -49,7 +49,7 @@ def high_sensitivity_threshold_calculation(count_array, exp_cells):
     return np.quantile(top_count, 0.95)/200
 
 # list for empty drops (output in high-sensitivity mode)
-DEFAULT_EMPTY_DROP_FN = 'Emtpy_BC.csv'
+DEFAULT_EMPTY_DROP_FN = 'emtpy_bc.csv'
 DEFAULT_EMPTY_DROP_MIN_ED = 5 # minimum edit distance from emtpy drop BC to selected BC
 DEFAULT_EMPTY_DROP_NUM = 2000 # number of BC in the output
-DEFAULT_EMPTY_DROP_MAX_COUNT_RATIO = 0.5 # maximum count ratio of the output empty BC to any cell associated BC
+    
