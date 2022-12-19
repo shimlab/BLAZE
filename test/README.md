@@ -32,6 +32,6 @@ Generate a new whitelist using the putative barcode table (`putative_bc.csv` fro
 
  * `whitelist_hs.csv`
  * `knee_plot_update.png`
- * `emtpy_bc.csv`
+ * `empty_bc.csv`
 
 **Note:** `update_whitelist.py` saves whitelist as "whitelist.csv" by default, which overwrites the default output "whitelist.csv" from `blaze.py`.
