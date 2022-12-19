@@ -272,7 +272,7 @@ def qc_report(pass_count, min_phred_score):
         f'''
         Total number of reads: 
             {total_read:,}
-        Reads with unambigous polyT and adapter positions found:            
+        Reads with unambiguous polyT and adapter positions found:            
             {pass_count[0]+ pass_count[100]:,} ({(pass_count[0]+ pass_count[100])/total_read*100:.2f}% of all reads)
             {pass_count[0]:,} in which all bases in the putative BC have Q>={min_phred_score}
         Failed Reads: 
