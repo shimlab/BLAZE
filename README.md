@@ -17,7 +17,7 @@ Download and unzip the [latest release](https://github.com/shimlab/BLAZE/release
 ```
 wget https://github.com/shimlab/BLAZE/releases/download/v1.1.0/BLAZE_v1.1.0.zip
 unzip BLAZE_v1.1.0.zip
-cd BLAZE-main
+cd BLAZE
 ```
 
 ## Conda environment
