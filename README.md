@@ -17,7 +17,7 @@ Download and unzip the [latest release](https://github.com/shimlab/BLAZE/release
 ```
 wget https://github.com/shimlab/BLAZE/releases/download/v1.1.0/BLAZE_v1.1.0.zip
 unzip BLAZE_v1.1.0.zip
-cd BLAZE
+cd BLAZE-main
 ```
 
 ## Conda environment
@@ -39,7 +39,7 @@ conda activate blaze
 ## Test run
 The following command runs BLAZE on a test dataset provided in `/test/data`. The expected output can be found [here](test/).
 ```
-bash test/test_run.sh
+bash test/run_test.sh
 ```
 
 # Module:
