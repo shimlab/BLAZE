@@ -124,7 +124,7 @@ To obtain an output quickly. See [more examples here](test/) or run `python3 bin
 If you find BLAZE useful for your work, please cite our paper:
 
 >You, Y., Prawer, Y. D., De Paoli-Iseppi, R., Hunt, C. P., Parish, C. L., Shim, H., & Clark, M. B. (2023) Identification of cell barcodes from long-read single-cell RNA-seq with BLAZE. Genome Biol 24, 66.
->[You et al. 2022](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-023-02907-y)
+>[You et al. 2023](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-023-02907-y)
 
 
 # Data availability
