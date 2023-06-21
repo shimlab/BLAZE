@@ -7,8 +7,11 @@ import pandas as pd
 import numpy as np
 import swifter
 import gzip
+import Bio
 from Bio import SeqIO
 import os
+from tqdm import tqdm
+
 
 import blaze #read_batch_generator
 import helper
@@ -26,6 +29,8 @@ def match_bc(bc, whitelist, max_ed):
         'ambiguous': if multiple barcode was found in the whitelist
     """
     if not isinstance(bc, str): #nan
+        return ''
+    if not bc:
         return ''
     best_ed = max_ed
     bc_hit = ''
@@ -71,29 +76,41 @@ def fastq_trim_seq(record, start = 0, end = None):
         record.letter_annotations['phred_quality']=qscore
     return record
 
-def batch_barcode_to_fastq(read_batch, mapping_df ,gz = True):
+def batch_barcode_to_fastq(read_batches_with_idx, assignment_df ,gz = True):
     """Take a read batch, write fastq/fastq.gz to a tmp file
     """
+    read_batch, start_df_idx = read_batches_with_idx
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     temp_file_path = temp_file.name
     output_handle = gzip.open(temp_file_path, 'wt') if gz else open(temp_file_path, 'w')
     records = []
+    read_idx = 0
     for r in read_batch:
-        row = mapping_df.loc[r.id] #the row in putative bc table
-        if row.putative_bc == np.nan:
+        row = assignment_df.iloc[start_df_idx+read_idx]#the row in putative bc table
+        read_idx += 1 
+        try:
+            assert row.read_id == r.id
+        except AssertionError:
+            helper.err_msg("Different order in putative bc file and input fastq!")
+            sys.exit()
+
+        if not row.putative_bc:
             continue
         r = fastq_modify_header(r, row.BC_corrected, row.putative_umi)
         if row.umi_end < 0:
-            r = fastq_trim_seq(r,end = row.umi_end)
+            r = fastq_trim_seq(r,end = int(row.umi_end))
         else:
-            r = fastq_trim_seq(r,start = row.umi_end)
+            r = fastq_trim_seq(r,start = int(row.umi_end))
+
         records.append(r)
     SeqIO.write(records, output_handle, "fastq")
     output_handle.close()
+    return temp_file.name
 
 def assign_barcodes(putative_bc_csv, whitelsit_csv, n_process):
     # read putative barcode
     df = pd.read_csv(putative_bc_csv)
+    df['putative_bc'] = df['putative_bc'].fillna('')
     
     # read whitelist
     whitelist = [] 
@@ -110,22 +127,61 @@ def assign_barcodes(putative_bc_csv, whitelsit_csv, n_process):
     
     #df = df.set_index('read_id')# need UMI
     return df
-    
 
 
-# def main(fastq_ins, fastq_out, putative_bc_csv, whitelsit_csv, n_process, gzip):
-#     assignment_df = assign_barcodes(putative_bc_csv, whitelsit_csv, n_process)
-#     r_batch = blaze.read_batch_generator(fastq_ins, batch_size=50)
-#     rst_futures = helper.multiprocessing_submit(batch_barcode_to_fastq, 
-#                            r_batch, 
-#                            n_process=n_process,
-#                              mapping_df = assignment_df
-#                              ,gzip = gzip)
- 
-#     while next(rst_futures, None):
-#         pass # wait until all job finished
+
+
+def main_multi_strand(fastq_fns, fastq_out, putative_bc_csv, whitelsit_csv, n_process, gz, batchsize):
+    def read_batch_generator_with_idx(fastq_fns, batch_size):
+        """Generator of barches of reads from list of fastq files with the idx of the first read
+        in each batch
+
+        Args:
+            fastq_fns (list): fastq filenames
+            batch_size (int, optional):  Defaults to 100.
+        """
+        read_idx = 0
+        for fn in fastq_fns:
+            if str(fn).endswith('.gz'):
+                with gzip.open(fn, "rt") as handle:
+                    fastq = Bio.SeqIO.parse(handle, "fastq")
+                    read_batch = helper.batch_iterator(fastq, batch_size=batch_size)
+                    for batch in read_batch:
+                        batch_len = len(batch)
+                        yield batch, read_idx
+                        read_idx += batch_len
+            else:
+                fastq = Bio.SeqIO.parse(fn, "fastq")
+                read_batch = helper.batch_iterator(fastq, batch_size=batch_size)
+                for batch in read_batch:
+                    batch_len = len(batch)
+                    yield batch, read_idx
+                    read_idx += batch_len
+
+    # i = 1
+    # while os.path.exists(fastq_out):
+    #     fastq_out = f'{fastq_out.split("_")[0]}_{i}'
+    #     i+=1
+
+    assignment_df = assign_barcodes(putative_bc_csv, whitelsit_csv, n_process)
+    r_batches_with_idx = \
+        read_batch_generator_with_idx(fastq_fns, batchsize)
     
-def main(fastq_fns, fastq_out, putative_bc_csv, whitelsit_csv, n_process, gz, batchsize):
+    
+    rst_futures = helper.multiprocessing_submit(batch_barcode_to_fastq, 
+                           r_batches_with_idx, 
+                           n_process=n_process,
+                             assignment_df = assignment_df
+                             ,gz = gz)
+    
+    tmp_files = []
+    for f in  rst_futures:
+        tmp_fn = f.result()
+        tmp_files.append(f.result())
+    helper.concatenate_files(fastq_out, *tmp_files)
+
+
+def main_single_strand_wrt(fastq_fns, fastq_out, putative_bc_csv, whitelsit_csv, n_process, gz, batchsize):
     # check file exist. Avoid overwrite
     i = 1
     while os.path.exists(fastq_out):
@@ -139,16 +195,21 @@ def main(fastq_fns, fastq_out, putative_bc_csv, whitelsit_csv, n_process, gz, ba
     r_batches = blaze.read_batch_generator(fastq_fns, batchsize)
     
     read_idx = 0
-    for read_batch in r_batches:
+    for read_batch in tqdm(r_batches):
         records = []
         for r in read_batch:
             row = assignment_df.iloc[read_idx]#the row in putative bc table
             read_idx += 1 
-            if row.read_id != r.id:
-                print(row.read_id, r.id)
-            if row.putative_bc is np.nan:
+            
+            try:
+                assert row.read_id == r.id
+            except AssertionError:
+                helper.err_msg("Different order in putative bc file and input fastq!")
+
+            if not row.putative_bc:
                 continue
             r = fastq_modify_header(r, row.BC_corrected, row.putative_umi)
+
             if row.umi_end < 0:
                 r = fastq_trim_seq(r,end = int(row.umi_end))
             else:

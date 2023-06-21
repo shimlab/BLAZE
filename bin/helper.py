@@ -6,6 +6,7 @@ from pathlib import Path
 from tqdm import tqdm
 import os
 import sys
+import shutil
 
 def reverse_complement(seq):
 	'''
@@ -140,7 +141,7 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = Tr
                 yield job_completed[job_to_yield][0]
                 del job_completed[job_to_yield]
                 job_to_yield += 1
-        # all jobs finished
+        # all jobs finished: yield complelted job in the submit order
         else:
             while len(job_completed):
                 pbar.update(job_completed[job_to_yield][1])
@@ -148,7 +149,14 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = Tr
                 del job_completed[job_to_yield]
                 job_to_yield += 1
             break
-        
+
+# concatenate multiple files
+def concatenate_files(output_file, *input_files):
+    with open(output_file, 'wb') as outfile:
+        for input_file in input_files:
+            with open(input_file, 'rb') as infile:
+                shutil.copyfileobj(infile, outfile)
+            os.remove(input_file)    
 
 # get file with a certian extensions
 def get_files(search_dir, extensions, recursive=True):

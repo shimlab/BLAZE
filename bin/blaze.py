@@ -451,6 +451,7 @@ def read_batch_generator(fastq_fns, batch_size):
                 yield batch
 
 
+
 def main():
     
     fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist,\
@@ -531,7 +532,7 @@ def main():
         helper.green_msg(f'Whitelist saved as {out_whitelist}.csv!')
 
 
-    read_assignment.main(fastq_fns, 'a', 'putative_bc.csv', 'whitelist.csv',
+    read_assignment.main_multi_strand(fastq_fns, 'output.fastq.gz', 'putative_bc.csv', 'whitelist.csv',
                          n_process, True, batch_size)
 
 if __name__ == '__main__':
