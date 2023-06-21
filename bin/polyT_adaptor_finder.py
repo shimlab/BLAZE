@@ -30,6 +30,7 @@ class Read(object):
         self.seq = sequence
         self.phred_score = phred_score
         self._strand = strand
+        self._get_strand_and_raw_bc_flag = False # record whether the raw bc searching has been performed
         for key in kwargs.keys():
             self.__dict__[key] = kwargs[key]
             
@@ -172,6 +173,7 @@ class Read(object):
         None.
 
         '''
+        self._get_strand_and_raw_bc_flag = True
         adapt_dict=self.find_adaptor()
         self.adaptor_polyT_pass = 0
         num_of_strand_find = len(adapt_dict)
@@ -234,13 +236,41 @@ class Read(object):
                 self.raw_bc_min_q = None
         
         # get poly_T_start_raw and adaptor_end_raw
+    
     @property
-    def poly_T_start_raw(self):
-        pass
+    def adator_trimming_idx(self):
+        """sequencing after trimming the adaptor and UMI
+        Returns:
+            index of the end of the UMI, negative if it's polyA strand
+        """
+        if not self._get_strand_and_raw_bc_flag:
+            self.get_strand_and_raw_bc()
+        if not self._strand:
+            return None
+        elif self._strand == '+':
+            return int(-self.raw_bc_start-16-DEFAULT_UMI_SIZE)
+        else: 
+            return int(self.raw_bc_start+16+DEFAULT_UMI_SIZE)
+
+    @property
+    def putative_UMI(self):
+        if not self._get_strand_and_raw_bc_flag:
+            self.get_strand_and_raw_bc()
+        if not self._strand:
+            return None
+        elif self._strand == '+':
+            return helper.reverse_complement(
+                        self.seq)[self.raw_bc_start+16: self.raw_bc_start+16+DEFAULT_UMI_SIZE]
+        else: 
+            return self.seq[
+                self.raw_bc_start+16: self.raw_bc_start+16+DEFAULT_UMI_SIZE]
     
     @property
     def adaptor_end_raw(self):
         pass      
+
+    
+
     @property
     def strand(self):
         if not self._strand:
@@ -261,6 +291,7 @@ class Read(object):
             helper.warning_msg("Error: strand must be '+' or '-'")
         else:
             self._strand = v
+
 # test code
 def main():
         # test reads

@@ -32,7 +32,9 @@ from Levenshtein import distance as edit_distance
 
 import helper
 from config import *
-from polyT_adaptor_finder import Read
+import polyT_adaptor_finder 
+import read_assignment
+#import polyT_adaptor_finder.Read
 
 def parse_arg():
     
@@ -219,11 +221,13 @@ def get_raw_bc_from_reads(reads, min_q=0):
     putative_bc_min_qs = []
     raw_bc = []
     raw_bc_pass = []
+    umis = []
+    trim_idxs = []
 
     for i,r in enumerate(reads):
         
         # create read object 
-        read = Read(read_id = r.id, sequence=str(r.seq), 
+        read = polyT_adaptor_finder.Read(read_id = r.id, sequence=str(r.seq), 
                     phred_score=r.letter_annotations['phred_quality'])    
         
 
@@ -231,22 +235,23 @@ def get_raw_bc_from_reads(reads, min_q=0):
         read_ids.append(read.id)
         putative_bcs.append(read.raw_bc)
         putative_bc_min_qs.append(read.raw_bc_min_q)
-
+        umis.append(read.putative_UMI)
+        trim_idxs.append(read.adator_trimming_idx)
         
         if read.raw_bc_min_q and read.raw_bc_min_q >= min_q:     
             raw_bc.append(read.raw_bc)
             
         if read.raw_bc_min_q and read.raw_bc_min_q < min_q:  
-            raw_bc_pass.append(100)
+            raw_bc_pass.append(100) #tag for low quality putative bc
         else:
             raw_bc_pass.append(read.adaptor_polyT_pass)
-    # raw_bc_count += Counter(raw_bc)
-    # raw_bc_pass_count += Counter(raw_bc_pass)
-    
+
     rst_df = pd.DataFrame(
         {'read_id': read_ids,
          'putative_bc': putative_bcs,
-         'putative_bc_min_q': putative_bc_min_qs
+         'putative_bc_min_q': putative_bc_min_qs,
+        'putative_umi': umis,
+         'umi_end': trim_idxs
         }
         )
     return Counter(raw_bc), Counter(raw_bc_pass), rst_df
@@ -458,6 +463,7 @@ def main():
         fastq_fns = helper.get_files(fastq_dir, ['*.fastq', '*.fq', '*.fastq.gz', '*.fg.gz'])
     elif os.path.isfile(fastq_dir):
         fastq_fns = [fastq_dir]
+        
     else:
         helper.err_msg(f"File type of input file/dir {fastq_fns} is not supported.")
         sys.exit(1)
@@ -523,6 +529,10 @@ def main():
             )
     else:
         helper.green_msg(f'Whitelist saved as {out_whitelist}.csv!')
+
+
+    read_assignment.main(fastq_fns, 'a', 'putative_bc.csv', 'whitelist.csv',
+                         n_process, True, batch_size)
 
 if __name__ == '__main__':
     main()

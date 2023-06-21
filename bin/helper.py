@@ -99,40 +99,56 @@ class param:
 #         print(111)
 #         pbar.update(1)
 #     return futures
-def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = True,*arg, **kwargs):
+def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = True, pbar_unit='Read',*arg, **kwargs):
     executor = concurrent.futures.ProcessPoolExecutor(n_process)
     
     # A dictionary which will contain the  future object
-    max_queue = n_process + 10
+    max_queue = n_process
     if pbar:
-        pbar = tqdm(unit = 'Read', desc='Processed')
+        pbar = tqdm(unit = pbar_unit, desc='Processed')
 
     futures = {}
     n_job_in_queue = 0
+    
+    # make sure the result is yield in the order of submit.
+    job_idx = 0
+    job_to_yield = 0
+    job_completed = {}
+
     while True:
         while n_job_in_queue < max_queue:
             i = next(iterator, None)
             if not i:
                 break
-            futures[executor.submit(func, i, *arg, **kwargs)] = len(i)
+            futures[executor.submit(func, i, *arg, **kwargs)] = (len(i),job_idx)
+            job_idx += 1
             n_job_in_queue += 1
 
         # will wait until as least one job finished
-        # batch size as value
+        # batch size as value, release the cpu as soon as one job finished
         job = next(as_completed(futures), None)
-        
         # no more job  
-        if job is None:
-            break
-        # otherwise
-        else:
-            n_job_in_queue -= 1
-            # update pregress bar based on batch size
-            pbar.update(futures[job])
-
-            yield job
+        if job is not None:
+            job_completed[futures[job][1]] = job, futures[job][0]
             del futures[job]
-
+            #print(job_completed.keys())
+            # check order
+            if  job_to_yield in job_completed.keys():
+                n_job_in_queue -= 1
+                # update pregress bar based on batch size
+                pbar.update(job_completed[job_to_yield][1])
+                yield job_completed[job_to_yield][0]
+                del job_completed[job_to_yield]
+                job_to_yield += 1
+        # all jobs finished
+        else:
+            while len(job_completed):
+                pbar.update(job_completed[job_to_yield][1])
+                yield job_completed[job_to_yield][0]
+                del job_completed[job_to_yield]
+                job_to_yield += 1
+            break
+        
 
 # get file with a certian extensions
 def get_files(search_dir, extensions, recursive=True):
