@@ -7,6 +7,7 @@ from tqdm import tqdm
 import os
 import sys
 import shutil
+import time
 
 def reverse_complement(seq):
 	'''
@@ -31,10 +32,13 @@ def warning_msg(msg):
 	CEND = '\033[0m'
 	print(CRED + msg + CEND)
 
-def green_msg(msg):
+def green_msg(msg, printit = True):
     CRED = '\033[92m'
     CEND = '\033[0m'
-    print(CRED + msg + CEND)
+    if printit:
+        print(CRED + msg + CEND)
+    else:
+        return CRED + msg + CEND
 
 def sliding_window_sum(array, window) :
     cum = np.cumsum(array)  
@@ -100,7 +104,7 @@ class param:
 #         print(111)
 #         pbar.update(1)
 #     return futures
-def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = True, pbar_unit='Read',*arg, **kwargs):
+def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = True, pbar_unit='Read',pbar_func=len, *arg, **kwargs):
     executor = concurrent.futures.ProcessPoolExecutor(n_process)
     
     # A dictionary which will contain the  future object
@@ -121,7 +125,57 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = Tr
             i = next(iterator, None)
             if not i:
                 break
-            futures[executor.submit(func, i, *arg, **kwargs)] = (len(i),job_idx)
+            futures[executor.submit(func, i, *arg, **kwargs)] = (pbar_func(i),job_idx)
+            job_idx += 1
+            n_job_in_queue += 1
+
+        # will wait until as least one job finished
+        # batch size as value, release the cpu as soon as one job finished
+        job = next(as_completed(futures), None)
+        # no more job  
+        if job is not None:
+            job_completed[futures[job][1]] = job, futures[job][0]
+            del futures[job]
+            #print(job_completed.keys())
+            # check order
+            if  job_to_yield in job_completed.keys():
+                n_job_in_queue -= 1
+                # update pregress bar based on batch size
+                pbar.update(job_completed[job_to_yield][1])
+                yield job_completed[job_to_yield][0]
+                del job_completed[job_to_yield]
+                job_to_yield += 1
+        # all jobs finished: yield complelted job in the submit order
+        else:
+            while len(job_completed):
+                pbar.update(job_completed[job_to_yield][1])
+                yield job_completed[job_to_yield][0]
+                del job_completed[job_to_yield]
+                job_to_yield += 1
+            break
+
+def multithreading_submit(func, iterator, threads=mp.cpu_count()-1 ,pbar = True, pbar_unit='Read',pbar_func=len,*arg, **kwargs):
+    executor = concurrent.futures.ThreadPoolExecutor(threads)
+    
+    # A dictionary which will contain the  future object
+    max_queue = threads+10
+    if pbar:
+        pbar = tqdm(unit = pbar_unit, desc='Processed')
+
+    futures = {}
+    n_job_in_queue = 0
+    
+    # make sure the result is yield in the order of submit.
+    job_idx = 0
+    job_to_yield = 0
+    job_completed = {}
+
+    while True:
+        while n_job_in_queue < max_queue:
+            i = next(iterator, None)
+            if not i:
+                break
+            futures[executor.submit(func, i, *arg, **kwargs)] = (pbar_func(i),job_idx)
             job_idx += 1
             n_job_in_queue += 1
 
@@ -189,6 +243,7 @@ def batch_iterator(iterator, batch_size):
     for entry in iterator:
         i += 1
         batch.append(entry)
+        
         if i == batch_size:
             yield batch
             batch = []

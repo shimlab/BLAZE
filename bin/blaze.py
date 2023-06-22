@@ -29,27 +29,38 @@ import io
 import logging
 import gzip
 from Levenshtein import distance as edit_distance
+import logging
 
 import helper
 from config import *
 import polyT_adaptor_finder 
 import read_assignment
-#import polyT_adaptor_finder.Read
+from datetime import datetime
+
+# setup logging
+LOG_FORMAT = \
+'(%(asctime)s) %(message)s'
+DATE_FORMATE = '%d/%m/%Y %H:%M:%S' #'%a, %d %b %Y %H:%M:%S'
+logging.basicConfig(format=LOG_FORMAT, datefmt=DATE_FORMATE)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 def parse_arg():
     
     def print_help():
         help_message=\
             f'''
-            Usage: python3 {argv[0]} [OPTIONS] <fastq directory>
+            Usage: python3 {argv[0]}  --expect-cells <INT> [OPTIONS] <fastq directory>
             
+            Required argument:
+                --expect-cells <INT> (required in current version)
+                            Expected number of cells.
+
             Options:
                 -h, --help
                     Print this help message.
-                
-                --expect-cells <INT> (required in current version)
-                    Expected number of cells. Default: not specified
-                
+                --output_fastq
+                    Filename of output fastq file. The accepted suffix includes .fq, .fastq, .fg.gz, .fastq.gz   
                 --kit-version <v2 or v3>:
                     Choose from 10X Single Cell 3ʹ gene expression v2 or v3. 
                     Default: --kit_version v3.
@@ -105,6 +116,7 @@ def parse_arg():
     argv = sys.argv
     
     # Default 
+    fastq_out = DEFAULT_GRB_OUT_FASTQ
     n_process = mp.cpu_count()-1
     exp_cells = None
     full_bc_whitelist = None
@@ -124,7 +136,7 @@ def parse_arg():
     try: 
         opts, args = getopt.getopt(argv[1:],"h",
                     ["help","threads=","minQ=","full-bc-whitelist=","high-sensitivity-mode",
-                     "out-putative-bc=", "out-bc-whitelist=", "expect-cells=", 
+                     "out-putative-bc=", "out-bc-whitelist=", "expect-cells=", "output_fastq=",
                      "kit-version=", "batch-size=", "emptydrop", "emptydrop-max-count="])
     except getopt.GetoptError:
         helper.err_msg("Error: Invalid argument input") 
@@ -137,6 +149,8 @@ def parse_arg():
             sys.exit(0)
         elif opt == '--expect-cells':
             exp_cells = int(arg)
+        elif opt == '--output_fastq':
+            fastq_out = arg
         elif opt == '--threads':
             n_process = int(arg)
         elif opt == '--minQ':
@@ -178,20 +192,45 @@ def parse_arg():
         helper.err_msg("Error: Missing fastq directory.")   
         print_help()# print help doc when no command line args provided
         sys.exit(0)
-    
-    # check input
-    fastq_dir = args[0]
-    # if not os.path.isdir(fastq_dir):
-    #     helper.err_msg("Error: Input directory doesn't exist. Note that the input should be a directory instead of file.") 
-    #     sys.exit(1)
+
+    # check required argument
     if not exp_cells:
         helper.err_msg("--expect-cells is required to build the whitelist!") 
         sys.exit(1)
-
-
-    # check file
+    
+    # check input
+    fastq_dir = args[0]
     helper.check_exist([full_bc_whitelist, fastq_dir])
-    return fastq_dir, n_process, exp_cells ,min_phred_score, \
+    
+    if os.path.isdir(fastq_dir):
+        fastq_fns = helper.get_files(fastq_dir, ['*.fastq', '*.fq', '*.fastq.gz', '*.fg.gz'])
+    elif os.path.isfile(fastq_dir):
+        fastq_fns = [fastq_dir]
+    else:
+        helper.err_msg(f"File type of input file/dir {fastq_fns} is not supported.")
+        sys.exit(1)
+
+    # check output fastq
+    suf = ''
+    for x in ['.fastq', '.fq', '.fastq.gz', '.fg.gz']:
+        if fastq_out.endswith(x):
+            suf = x
+    if not suf:
+        helper.err_msg(f"Incorrect suffix for the file specified by ß--output_fastq.")
+        sys.exit(1)
+    if fastq_out.endswith('.gz'):
+        gz = True
+    else: 
+        gz = False
+    i = 1
+    fastq_out_specified = fastq_out
+    while os.path.exists(fastq_out):
+        fastq_out = f'{fastq_out_specified[:-len(suf)]}_{i}{suf}'
+        i+=1
+    if i != 1:
+        helper.warning_msg(f"Filename {fastq_out_specified} exists, will output demultiplexed reads into {fastq_out}.")
+
+    return fastq_fns, fastq_out, n_process, exp_cells ,min_phred_score, \
             full_bc_whitelist, out_raw_bc, out_whitelist, \
             high_sensitivity_mode, batch_size, emptydrop, emptydrop_max_count
 
@@ -364,7 +403,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None,
             return cells_bc, []
         else:
             # create a confident list of empty drops in high sensitivity mode
-            print("Creating emtpy droplets barocde list...")
+            logger.info("Creating emtpy droplets barocde list...")
             ept_bc = []
             ept_bc_max_count = min(cells_bc.values())
             ept_bc_max_count = min(ept_bc_max_count, empty_max_count)
@@ -389,7 +428,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None,
             return cells_bc, []
         else:
             # create a confident list of empty drops in high sensitivity mode
-            print("Creating emtpy droplets barocde list...")
+            logger.info("Creating emtpy droplets barocde list...")
             ept_bc = []
             ept_bc_max_count = min(cells_bc.values())
             ept_bc_max_count = min(ept_bc_max_count, empty_max_count)
@@ -454,86 +493,84 @@ def read_batch_generator(fastq_fns, batch_size):
 
 def main():
     
-    fastq_dir, n_process, exp_cells ,min_phred_score, full_bc_whitelist,\
+    fastq_fns, fastq_out, n_process, exp_cells ,min_phred_score, full_bc_whitelist,\
         out_raw_bc, out_whitelist, high_sensitivity_mode, \
         batch_size, emptydrop, emptydrop_max_count = parse_arg()
     
-    # get raw bc
-    # input template file
-    if os.path.isdir(fastq_dir):
-        fastq_fns = helper.get_files(fastq_dir, ['*.fastq', '*.fq', '*.fastq.gz', '*.fg.gz'])
-    elif os.path.isfile(fastq_dir):
-        fastq_fns = [fastq_dir]
-        
-    else:
-        helper.err_msg(f"File type of input file/dir {fastq_fns} is not supported.")
-        sys.exit(1)
+    # ######################
+    # ###### Getting putative barcodes
+    # ######################
+    # logger.info(f'Getting putative barcodes from {len(fastq_fns)} FASTQ files...')
+    # read_batchs = read_batch_generator(fastq_fns, batch_size=batch_size)
+    # rst_futures = helper.multiprocessing_submit(get_raw_bc_from_reads,
+    #                                         read_batchs, n_process=n_process, 
+    #                                         min_q=min_phred_score)
 
-    print(f'Getting putative barcodes from {len(fastq_fns)} FASTQ files...')
+    # raw_bc_count = Counter([])
+    # raw_bc_pass_count = Counter([])    
+    # rst_dfs = []
+    # for idx, f in enumerate(rst_futures):
+    #     count_bc, count_pass, rst_df = f.result() #write rst_df out
 
-    read_batchs = read_batch_generator(fastq_fns, batch_size=batch_size)
-
-    rst_futures = helper.multiprocessing_submit(get_raw_bc_from_reads,
-                                            read_batchs, n_process=n_process, 
-                                            min_q=min_phred_score)
-
-    raw_bc_count = Counter([])
-    raw_bc_pass_count = Counter([])    
-    rst_dfs = []
-    for idx, f in enumerate(rst_futures):
-        count_bc, count_pass, rst_df = f.result() #write rst_df out
-
-        raw_bc_count += count_bc
-        raw_bc_pass_count += count_pass
-        if idx == 0:
-            rst_df.to_csv(out_raw_bc+'.csv', index=False)
-        else:
-            rst_df.to_csv(out_raw_bc+'.csv', mode='a', index=False, header=False)
+    #     raw_bc_count += count_bc
+    #     raw_bc_pass_count += count_pass
+    #     if idx == 0:
+    #         rst_df.to_csv(out_raw_bc+'.csv', index=False)
+    #     else:
+    #         rst_df.to_csv(out_raw_bc+'.csv', mode='a', index=False, header=False)
     
-    helper.green_msg(f'Putative barcode table saved in {out_raw_bc}.csv')
+    # helper.green_msg(f'Putative barcode table saved in {out_raw_bc}.csv')
     
-    # output
-    print('\n----------------------stats of the putative barcodes--------------------------')
-    qc_report(raw_bc_pass_count, min_phred_score = min_phred_score)
-    print('-----------------------------------------------------\n')
-
-    print("Getting whitelist...\n")
+    # # output
+    # print('\n----------------------stats of the putative barcodes--------------------------')
+    # qc_report(raw_bc_pass_count, min_phred_score = min_phred_score)
+    # print('-----------------------------------------------------\n')
     
-    logger = logging.getLogger()
     
-    try:
-        bc_whitelist, ept_bc = get_bc_whitelist(raw_bc_count,
-                                full_bc_whitelist, 
-                                exp_cells=exp_cells,
-                                high_sensitivity_mode=high_sensitivity_mode,
-                                output_empty=emptydrop,
-                                empty_max_count=emptydrop_max_count)
-        with open(out_whitelist+'.csv', 'w') as f:
-            for k in bc_whitelist.keys():
-                f.write(k+'-1\n')
+    
+    # ######################
+    # ###### Whitelisting
+    # ######################
+    # logger.info("Getting whitelist...\n")
+    
+    
+    
+    # try:
+    #     bc_whitelist, ept_bc = get_bc_whitelist(raw_bc_count,
+    #                             full_bc_whitelist, 
+    #                             exp_cells=exp_cells,
+    #                             high_sensitivity_mode=high_sensitivity_mode,
+    #                             output_empty=emptydrop,
+    #                             empty_max_count=emptydrop_max_count)
+    #     with open(out_whitelist+'.csv', 'w') as f:
+    #         for k in bc_whitelist.keys():
+    #             f.write(k+'-1\n')
 
-        if len(ept_bc):
-            with open(DEFAULT_EMPTY_DROP_FN, 'w') as f:
-                for k in ept_bc:
-                    f.write(k+'-1\n')
-            helper.green_msg(f'Whitelist saved as {DEFAULT_EMPTY_DROP_FN}.')
+    #     if len(ept_bc):
+    #         with open(DEFAULT_EMPTY_DROP_FN, 'w') as f:
+    #             for k in ept_bc:
+    #                 f.write(k+'-1\n')
+    #         helper.green_msg(f'Whitelist saved as {DEFAULT_EMPTY_DROP_FN}.')    
 
-            
-
-    except Exception as e:
-        logger.exception(e)
-        helper.err_msg(
-            "Error: Failed to get whitelist. Please check the input files and settings."\
-            "Note that the whilelist can be obtained"\
-            f"from {out_raw_bc}.csv by using update_whitelist.py."\
-            "Run \"python3 BLAZE/bin/update_whitelist.py -h\"  for more details."
-            )
-    else:
-        helper.green_msg(f'Whitelist saved as {out_whitelist}.csv!')
+    # except Exception as e:
+    #     logger.exception(e)
+    #     helper.err_msg(
+    #         "Error: Failed to get whitelist. Please check the input files and settings."\
+    #         "Note that the whilelist can be obtained"\
+    #         f"from {out_raw_bc}.csv by using update_whitelist.py."\
+    #         "Run \"python3 BLAZE/bin/update_whitelist.py -h\"  for more details."
+    #         )
+    # else:
+    #     helper.green_msg(f'Whitelist saved as {out_whitelist}.csv!')
 
 
-    read_assignment.main_multi_strand(fastq_fns, 'output.fastq.gz', 'putative_bc.csv', 'whitelist.csv',
-                         n_process, True, batch_size)
+    ######################
+    ###### Demultiplexing
+    ######################
+    logger.info("Assigning reads to whitelist.\n")
+    print(out_raw_bc)
+    read_assignment.main_multi_thread(fastq_fns, fastq_out, f'{out_raw_bc}.csv', f'{out_whitelist}.csv',
+                          n_process, True, batch_size)
 
 if __name__ == '__main__':
     main()

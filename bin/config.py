@@ -36,6 +36,7 @@ DEFAULT_GRB_WHITELIST_V2=\
 #output
 DEFAULT_GRB_OUT_RAW_BC='putative_bc'
 DEFAULT_GRB_OUT_WHITELIST = 'whitelist'
+DEFAULT_GRB_OUT_FASTQ = "matched_read.fastq.gz"
 
 ####################################################
 #####    DEFAULT in generating  whitelist     ######
