@@ -497,71 +497,71 @@ def main():
         out_raw_bc, out_whitelist, high_sensitivity_mode, \
         batch_size, emptydrop, emptydrop_max_count = parse_arg()
     
-    # ######################
-    # ###### Getting putative barcodes
-    # ######################
-    # logger.info(f'Getting putative barcodes from {len(fastq_fns)} FASTQ files...')
-    # read_batchs = read_batch_generator(fastq_fns, batch_size=batch_size)
-    # rst_futures = helper.multiprocessing_submit(get_raw_bc_from_reads,
-    #                                         read_batchs, n_process=n_process, 
-    #                                         min_q=min_phred_score)
+    ######################
+    ###### Getting putative barcodes
+    ######################
+    logger.info(f'Getting putative barcodes from {len(fastq_fns)} FASTQ files...')
+    read_batchs = read_batch_generator(fastq_fns, batch_size=batch_size)
+    rst_futures = helper.multiprocessing_submit(get_raw_bc_from_reads,
+                                            read_batchs, n_process=n_process, 
+                                            min_q=min_phred_score)
 
-    # raw_bc_count = Counter([])
-    # raw_bc_pass_count = Counter([])    
-    # rst_dfs = []
-    # for idx, f in enumerate(rst_futures):
-    #     count_bc, count_pass, rst_df = f.result() #write rst_df out
+    raw_bc_count = Counter([])
+    raw_bc_pass_count = Counter([])    
+    rst_dfs = []
+    for idx, f in enumerate(rst_futures):
+        count_bc, count_pass, rst_df = f.result() #write rst_df out
 
-    #     raw_bc_count += count_bc
-    #     raw_bc_pass_count += count_pass
-    #     if idx == 0:
-    #         rst_df.to_csv(out_raw_bc+'.csv', index=False)
-    #     else:
-    #         rst_df.to_csv(out_raw_bc+'.csv', mode='a', index=False, header=False)
+        raw_bc_count += count_bc
+        raw_bc_pass_count += count_pass
+        if idx == 0:
+            rst_df.to_csv(out_raw_bc+'.csv', index=False)
+        else:
+            rst_df.to_csv(out_raw_bc+'.csv', mode='a', index=False, header=False)
     
-    # helper.green_msg(f'Putative barcode table saved in {out_raw_bc}.csv')
+    helper.green_msg(f'Putative barcode table saved in {out_raw_bc}.csv')
     
-    # # output
-    # print('\n----------------------stats of the putative barcodes--------------------------')
-    # qc_report(raw_bc_pass_count, min_phred_score = min_phred_score)
-    # print('-----------------------------------------------------\n')
-    
-    
-    
-    # ######################
-    # ###### Whitelisting
-    # ######################
-    # logger.info("Getting whitelist...\n")
+    # output
+    print('\n----------------------stats of the putative barcodes--------------------------')
+    qc_report(raw_bc_pass_count, min_phred_score = min_phred_score)
+    print('-----------------------------------------------------\n')
     
     
     
-    # try:
-    #     bc_whitelist, ept_bc = get_bc_whitelist(raw_bc_count,
-    #                             full_bc_whitelist, 
-    #                             exp_cells=exp_cells,
-    #                             high_sensitivity_mode=high_sensitivity_mode,
-    #                             output_empty=emptydrop,
-    #                             empty_max_count=emptydrop_max_count)
-    #     with open(out_whitelist+'.csv', 'w') as f:
-    #         for k in bc_whitelist.keys():
-    #             f.write(k+'-1\n')
+    ######################
+    ###### Whitelisting
+    ######################
+    logger.info("Getting whitelist...\n")
+    
+    
+    
+    try:
+        bc_whitelist, ept_bc = get_bc_whitelist(raw_bc_count,
+                                full_bc_whitelist, 
+                                exp_cells=exp_cells,
+                                high_sensitivity_mode=high_sensitivity_mode,
+                                output_empty=emptydrop,
+                                empty_max_count=emptydrop_max_count)
+        with open(out_whitelist+'.csv', 'w') as f:
+            for k in bc_whitelist.keys():
+                f.write(k+'-1\n')
 
-    #     if len(ept_bc):
-    #         with open(DEFAULT_EMPTY_DROP_FN, 'w') as f:
-    #             for k in ept_bc:
-    #                 f.write(k+'-1\n')
-    #         helper.green_msg(f'Whitelist saved as {DEFAULT_EMPTY_DROP_FN}.')    
+        if len(ept_bc):
+            with open(DEFAULT_EMPTY_DROP_FN, 'w') as f:
+                for k in ept_bc:
+                    f.write(k+'-1\n')
+            helper.green_msg(f'Whitelist saved as {DEFAULT_EMPTY_DROP_FN}.')    
 
-    # except Exception as e:
-    #     logger.exception(e)
-    #     helper.err_msg(
-    #         "Error: Failed to get whitelist. Please check the input files and settings."\
-    #         "Note that the whilelist can be obtained"\
-    #         f"from {out_raw_bc}.csv by using update_whitelist.py."\
-    #         "Run \"python3 BLAZE/bin/update_whitelist.py -h\"  for more details."
-    #         )
-    # else:
-    #     helper.green_msg(f'Whitelist saved as {out_whitelist}.csv!')
+    except Exception as e:
+        logger.exception(e)
+        helper.err_msg(
+            "Error: Failed to get whitelist. Please check the input files and settings."\
+            "Note that the whilelist can be obtained"\
+            f"from {out_raw_bc}.csv by using update_whitelist.py."\
+            "Run \"python3 BLAZE/bin/update_whitelist.py -h\"  for more details."
+            )
+    else:
+        helper.green_msg(f'Whitelist saved as {out_whitelist}.csv!')
 
 
     ######################

@@ -13,3 +13,4 @@ dependencies:
   - pip:
     - levenshtein
     - fast-edit-distance
+    - swifter
