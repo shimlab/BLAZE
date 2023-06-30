@@ -262,6 +262,8 @@ def get_raw_bc_from_reads(reads, min_q=0):
     raw_bc_pass = []
     umis = []
     trim_idxs = []
+    pre_bc_flankings = []
+    post_umi_flankings = []
 
     for i,r in enumerate(reads):
         
@@ -276,6 +278,8 @@ def get_raw_bc_from_reads(reads, min_q=0):
         putative_bc_min_qs.append(read.raw_bc_min_q)
         umis.append(read.putative_UMI)
         trim_idxs.append(read.adator_trimming_idx)
+        pre_bc_flankings.append(read.pre_bc_flanking)
+        post_umi_flankings.append(read.post_umi_flanking)
         
         if read.raw_bc_min_q and read.raw_bc_min_q >= min_q:     
             raw_bc.append(read.raw_bc)
@@ -290,7 +294,9 @@ def get_raw_bc_from_reads(reads, min_q=0):
          'putative_bc': putative_bcs,
          'putative_bc_min_q': putative_bc_min_qs,
         'putative_umi': umis,
-         'umi_end': trim_idxs
+        'umi_end': trim_idxs,
+        'pre_bc_flanking': pre_bc_flankings,
+        'post_umi_flanking': post_umi_flankings
         }
         )
     return Counter(raw_bc), Counter(raw_bc_pass), rst_df
@@ -569,8 +575,14 @@ def main():
     ######################
     logger.info("Assigning reads to whitelist.\n")
     print(out_raw_bc)
-    read_assignment.main_multi_thread(fastq_fns, fastq_out, f'{out_raw_bc}.csv', f'{out_whitelist}.csv',
-                          n_process, True, batch_size)
+    read_assignment.main_multi_thread(fastq_fns, 
+                                      fastq_out, 
+                                      f'{out_raw_bc}.csv', 
+                                      f'{out_whitelist}.csv',
+                                      DEFAULT_ASSIGNMENT_ED,
+                                      n_process,
+                                      True, 
+                                      batch_size)
 
 if __name__ == '__main__':
     main()

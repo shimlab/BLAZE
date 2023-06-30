@@ -37,6 +37,7 @@ DEFAULT_GRB_WHITELIST_V2=\
 DEFAULT_GRB_OUT_RAW_BC='putative_bc'
 DEFAULT_GRB_OUT_WHITELIST = 'whitelist'
 DEFAULT_GRB_OUT_FASTQ = "matched_read.fastq.gz"
+DEFAULT_GRB_FLANKING_SIZE = 5
 
 ####################################################
 #####    DEFAULT in generating  whitelist     ######
@@ -55,3 +56,12 @@ DEFAULT_EMPTY_DROP_FN = 'emtpy_bc.csv'
 DEFAULT_EMPTY_DROP_MIN_ED = 5 # minimum edit distance from emtpy drop BC to selected BC
 DEFAULT_EMPTY_DROP_NUM = 2000 # number of BC in the output
     
+
+####################################################
+#####    DEFAULT in Demultiplexing            ######
+####################################################
+
+DEFAULT_ASSIGNMENT_ED = 2 
+# Make sure this is smaller than DEFAULT_GRB_FLANKING_SIZE
+assert DEFAULT_GRB_FLANKING_SIZE >= DEFAULT_ASSIGNMENT_ED
+DEFAULT_ED_FLANKING = DEFAULT_ASSIGNMENT_ED

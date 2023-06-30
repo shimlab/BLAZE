@@ -266,9 +266,35 @@ class Read(object):
                 self.raw_bc_start+16: self.raw_bc_start+16+DEFAULT_UMI_SIZE]
     
     @property
-    def adaptor_end_raw(self):
-        pass      
-
+    def pre_bc_flanking(self):
+        if not self._get_strand_and_raw_bc_flag:
+            self.get_strand_and_raw_bc()
+        if not self._strand:
+            return None
+        elif self._strand == '+':
+            return helper.reverse_complement(
+                        self.seq)[self.raw_bc_start-DEFAULT_GRB_FLANKING_SIZE: self.raw_bc_start]
+        else: 
+            return self.seq[self.raw_bc_start-DEFAULT_GRB_FLANKING_SIZE: self.raw_bc_start]
+    
+    @property
+    def post_umi_flanking(self):
+        """sequencing after trimming the adaptor and UMI
+        Returns:
+            index of the end of the UMI, negative if it's polyA strand
+        """
+        if not self._get_strand_and_raw_bc_flag:
+            self.get_strand_and_raw_bc()
+        if not self._strand:
+            return None
+        elif self._strand == '+':
+            return helper.reverse_complement(
+                        self.seq)[self.raw_bc_start+16+DEFAULT_UMI_SIZE: \
+                                  self.raw_bc_start+16+DEFAULT_UMI_SIZE+ DEFAULT_GRB_FLANKING_SIZE]
+        else: 
+            return self.seq[
+                self.raw_bc_start+16+DEFAULT_UMI_SIZE: \
+                    self.raw_bc_start+16+DEFAULT_UMI_SIZE+DEFAULT_GRB_FLANKING_SIZE]
     
 
     @property
