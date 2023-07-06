@@ -13,6 +13,7 @@ Output:
 """
   
 import sys
+import shlex
 import os
 import getopt
 import Bio.SeqIO
@@ -28,7 +29,7 @@ import zipfile
 import io
 import logging
 import gzip
-from Levenshtein import distance as edit_distance
+from fast_edit_distance import edit_distance
 import logging
 
 import helper
@@ -45,7 +46,7 @@ logging.basicConfig(format=LOG_FORMAT, datefmt=DATE_FORMATE)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-def parse_arg():
+def parse_arg(argv):
     
     def print_help():
         help_message=\
@@ -112,8 +113,11 @@ def parse_arg():
             '''
         print(textwrap.dedent(help_message))
    
+    if not argv:
+        argv = sys.argv
+    else:
+        argv = ['script_name'] + shlex.split(argv)
     
-    argv = sys.argv
     
     # Default 
     fastq_out = DEFAULT_GRB_OUT_FASTQ
@@ -179,7 +183,7 @@ def parse_arg():
 
     if full_bc_whitelist:
         helper.warning_msg(textwrap.dedent(
-            f'You are using {os.path.basename(full_bc_whitelist)} as the full barcode'\
+            f'You are using {os.path.basename(full_bc_whitelist)} as the full barcode '\
             'whitelist. Note that the barcodes not listed in the file will never be found.'))
     else:
         if kit == 'v3':
@@ -218,6 +222,7 @@ def parse_arg():
     if not suf:
         helper.err_msg(f"Incorrect suffix for the file specified by ß--output_fastq.")
         sys.exit(1)
+
     if fastq_out.endswith('.gz'):
         gz = True
     else: 
@@ -416,7 +421,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None,
             ept_bc_candidate = \
                 [k for k,v in raw_bc_count.items() if v < ept_bc_max_count]
             for k in ept_bc_candidate:
-                if min([edit_distance(k, x) for x in cells_bc.keys()]) >= DEFAULT_EMPTY_DROP_MIN_ED:
+                if min([edit_distance(k, x, max_ed = DEFAULT_EMPTY_DROP_MIN_ED) for x in cells_bc.keys()]) >= DEFAULT_EMPTY_DROP_MIN_ED:
                     ept_bc.append(k)
 
                 # we don't need too much BC in this list
@@ -441,7 +446,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None,
             ept_bc_candidate = \
                 [k for k,v in raw_bc_count.items() if v < ept_bc_max_count]
             for k in ept_bc_candidate:
-                if min([edit_distance(k, x) for x in cells_bc.keys()]) >= DEFAULT_EMPTY_DROP_MIN_ED:
+                if min([edit_distance(k, x, max_ed = DEFAULT_EMPTY_DROP_MIN_ED) for x in cells_bc.keys()]) >= DEFAULT_EMPTY_DROP_MIN_ED:
                     ept_bc.append(k)
 
                 # we don't need too much BC in this list
@@ -497,11 +502,11 @@ def read_batch_generator(fastq_fns, batch_size):
 
 
 
-def main():
+def main(argv=None):
     
     fastq_fns, fastq_out, n_process, exp_cells ,min_phred_score, full_bc_whitelist,\
         out_raw_bc, out_whitelist, high_sensitivity_mode, \
-        batch_size, emptydrop, emptydrop_max_count = parse_arg()
+        batch_size, emptydrop, emptydrop_max_count = parse_arg(argv)
     
     ######################
     ###### Getting putative barcodes
@@ -574,7 +579,6 @@ def main():
     ###### Demultiplexing
     ######################
     logger.info("Assigning reads to whitelist.\n")
-    print(out_raw_bc)
     read_assignment.main_multi_thread(fastq_fns, 
                                       fastq_out, 
                                       f'{out_raw_bc}.csv', 

@@ -11,6 +11,5 @@ dependencies:
   - matplotlib
   - pip
   - pip:
-    - levenshtein
-    - fast-edit-distance=1.2.0
+    - fast-edit-distance==1.2.0
     - swifter

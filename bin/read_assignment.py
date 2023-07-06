@@ -216,9 +216,7 @@ def assign_barcodes(putative_bc_csv, whitelsit_csv, n_process, max_ed):
                 set_npartitions(n_process).\
                     apply(match_bc_row, axis=1, whitelist=whitelist, max_ed=max_ed)
     
-
-    #df = df.set_index('read_id')# need UMI
-    print(df.head())
+    logger.info(helper.green_msg(f"Demultiplexing finshied: ", printit = False))
     return df
 
 def main_multi_thread(fastq_fns, fastq_out, putative_bc_csv, whitelsit_csv, max_ed, n_process, gz, batchsize):

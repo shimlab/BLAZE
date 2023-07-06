@@ -1,5 +1,16 @@
 <img src="logo.png" width="300"/>
 
+# Updates of the specific branch compared to the main branch:
+* Using `fast-edit-distance` instead of `Levenshtein` package for generating the empty barcode list
+* Add more columns into the putative barcode table:
+    * putative UMI
+    * UMI end position (for later trimming the adator-UMI sequence from each reads)
+    * Flanking bases before barcode and after UMI (for correction of insertion and deletion within the putative barcode and UMIs)
+* Add function to perform read-to-whitelist assignment. A putative barcode (16nt) with first be extended to include flanking bases from both sides. Then we scan though the whitelist and find the one with lowest subsequence ED (defined as the minimum edits required to make a shorter sequence a subsequence of the longer on). The UMI position will also be corrested if some insertion and deletion found within the 16nt putative barcode.
+* The bases before and included in UMI will be trimmed it the demultiplexed reads. The output format will be in fastq or fastq.gz. The header with be `@<16 nt BC>_<12 bc UMI>#read_id`
+
+
+
 # BLAZE (Barcode identification from Long reads for AnalyZing single cell gene Expression)
 [![Github All Releases](https://img.shields.io/github/downloads/shimlab/BLAZE/total.svg)](https://github.com/shimlab/BLAZE/releases/download/v1.1.0/BLAZE_v1.1.0.zip)
 
