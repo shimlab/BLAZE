@@ -94,8 +94,9 @@ def match_bc_row(row, whitelist, max_ed):
         return pd.Series(['', row.putative_umi])
     
     umi_adj = end_idx - (len(bc) - 1 -DEFAULT_ED_FLANKING )
+    out_umi = row.putative_umi
     if umi_adj > 0:
-        out_umi = row.putative_umi[umi_adj:] + row.post_bc_flanking[:umi_adj]
+        out_umi = row.putative_umi[umi_adj:] + row.post_umi_flanking[:umi_adj]
     elif umi_adj < 0:
         out_umi =  row.putative_bc[umi_adj:] + row.putative_umi[:umi_adj]
     
