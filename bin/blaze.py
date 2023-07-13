@@ -60,12 +60,18 @@ def parse_arg(argv):
             Options:
                 -h, --help
                     Print this help message.
-                --output_fastq
-                    Filename of output fastq file. The accepted suffix includes .fq, .fastq, .fg.gz, .fastq.gz   
+
+                --output-prefix <prefix>
+                    Filename of output files.
+
+                --overwrite
+                    Overwrite the old file when the output file(s) exist. If not specified, 
+                    the steps generating the existing file(s) will be skipped.
+
                 --kit-version <v2 or v3>:
                     Choose from 10X Single Cell 3ʹ gene expression v2 or v3. 
                     Default: --kit_version v3.
-                
+
                 --minQ <INT>:
                     Putative BC contains one or more bases with Q<minQ is not counted 
                     in the "Putative BC rank plot". Default: --minQ=15
@@ -82,17 +88,8 @@ def parse_arg(argv):
                     txt file containing all the possible BCs. You may provide your own whitelist. 
                     No need to specify this if users want to use the 10X whilelist. The correct 
                     version of 10X whilelist will be determined based on 10X kit version.
-                
-                --out-putative-bc <filename_prefix>
-                    Output a csv file for the putative BC in each read. 
-                    Default: --out-putative-bc=putative_bc
-                
-                --out-bc-whitelist <filename_prefix>
-                    Output the whitelist identified from all the reads. 
-                    Default: --out-bc-whitelist=whitelist
 
             High sensitivity mode:
-
                 --high-sensitivity-mode:
                     Turn on the sensitivity mode, which increases the sensitivity of barcode
                     detections but potentially increase the number false/uninformative BC in
@@ -100,12 +97,8 @@ def parse_arg(argv):
                     Note that --emptydrop is recommanded specified with this mode (See details below).
 
             Empty droplet BCs
-                --emptydrop
-                    Output list of BCs corresponding to empty droplets (filename: {DEFAULT_EMPTY_DROP_FN}), 
-                    which could be used to estimate ambiant RNA expressionprofile.
-                
                 --emptydrop-max-count <INT>
-                    Only select barcodes supported by a maximum number of high-confidence
+                    Only select empty droplet barcodes supported by a maximum number of high-confidence
                     putative barcode count. (Default: Inf, i.e. no maximum number is set
                     and any barcodes with ED>= {DEFAULT_EMPTY_DROP_MIN_ED} to the barcodes
                     in whitelist can be selected as empty droplets)
@@ -116,32 +109,28 @@ def parse_arg(argv):
     if not argv:
         argv = sys.argv
     else:
-        argv = ['script_name'] + shlex.split(argv)
+        argv = ['blaze.py'] + shlex.split(argv)
     
     
     # Default 
-    fastq_out = DEFAULT_GRB_OUT_FASTQ
+    
+    prefix = DEFAULT_PREFIX
+    overwrite = False
     n_process = mp.cpu_count()-1
     exp_cells = None
     full_bc_whitelist = None
     min_phred_score = DEFAULT_GRB_MIN_SCORE
     kit = DEFAULT_GRB_KIT
-    out_raw_bc = DEFAULT_GRB_OUT_RAW_BC
-    out_whitelist = DEFAULT_GRB_OUT_WHITELIST
     batch_size=1000
-
     high_sensitivity_mode = False   
-
-    emptydrop = False
     emptydrop_max_count = np.inf
 
     # Read from options
-
     try: 
         opts, args = getopt.getopt(argv[1:],"h",
                     ["help","threads=","minQ=","full-bc-whitelist=","high-sensitivity-mode",
-                     "out-putative-bc=", "out-bc-whitelist=", "expect-cells=", "output_fastq=",
-                     "kit-version=", "batch-size=", "emptydrop", "emptydrop-max-count="])
+                     "output-prefix=", "expect-cells=", "overwrite",
+                     "kit-version=", "batch-size=", "emptydrop-max-count="])
     except getopt.GetoptError:
         helper.err_msg("Error: Invalid argument input") 
         print_help()
@@ -151,10 +140,12 @@ def parse_arg(argv):
         if opt in  ("-h", "--help"):
             print_help()
             sys.exit(0)
+        elif opt == '--output-prefix':
+            prefix = arg
         elif opt == '--expect-cells':
             exp_cells = int(arg)
-        elif opt == '--output_fastq':
-            fastq_out = arg
+        elif opt == '--overwrite':
+            overwrite = True
         elif opt == '--threads':
             n_process = int(arg)
         elif opt == '--minQ':
@@ -162,9 +153,7 @@ def parse_arg(argv):
         elif opt == '--full-bc-whitelist':
             full_bc_whitelist = arg  
         elif opt == "--out-putative-bc":
-            out_raw_bc = arg      
-        elif opt == "--out-bc-whitelist":
-            out_whitelist = arg 
+            out_raw_bc_fn = arg      
         elif opt == "--kit-version":
             kit = arg.lower()
         elif opt == "--high-sensitivity-mode":
@@ -172,11 +161,15 @@ def parse_arg(argv):
             #emptydrop = True
         elif opt == "--batch-size":
             batch_size = int(arg)
-        elif opt == "--emptydrop":
-            emptydrop = True
         elif opt == "--emptydrop-max-count":
             emptydrop_max_count = int(arg)
-            
+    
+    # output filename:
+    out_fastq_fn = prefix + DEFAULT_GRB_OUT_FASTQ
+    out_raw_bc_fn = prefix + DEFAULT_GRB_OUT_RAW_BC
+    out_whitelist_fn = prefix + DEFAULT_GRB_OUT_WHITELIST
+    out_emptydrop_fn = prefix + DEFAULT_EMPTY_DROP_FN
+    out_plot_fn = prefix + DEFAULT_KNEE_PLOT_FN
     if kit not in ['v2', 'v3']:
         helper.err_msg("Error: Invalid value of --kit-version, please choose from v3 or v2") 
         sys.exit()
@@ -214,30 +207,47 @@ def parse_arg(argv):
         helper.err_msg(f"File type of input file/dir {fastq_fns} is not supported.")
         sys.exit(1)
 
-    # check output fastq
-    suf = ''
-    for x in ['.fastq', '.fq', '.fastq.gz', '.fg.gz']:
-        if fastq_out.endswith(x):
-            suf = x
-    if not suf:
-        helper.err_msg(f"Incorrect suffix for the file specified by ß--output_fastq.")
+    # check output filenames
+    # files_status = {
+    #     out_raw_bc_fn: os.path.exists(out_raw_bc_fn), # False for not existing
+    #     out_whitelist_fn: os.path.exists(out_whitelist_fn),
+    #     out_fastq_fn: os.path.exists(out_fastq_fn)
+    # }
+
+    if not helper.check_suffix(out_fastq_fn, ['.fastq', '.fq', '.fastq.gz', '.fg.gz']):
+        helper.err_msg(
+            f"Error in filename configuration:"
+            f"Filename '{out_fastq_fn}' should end with '.fastq', '.fq', '.fastq.gz' or '.fg.gz'. Please check the config.py file in BLAZE.")
         sys.exit(1)
 
-    if fastq_out.endswith('.gz'):
-        gz = True
-    else: 
-        gz = False
-    i = 1
-    fastq_out_specified = fastq_out
-    while os.path.exists(fastq_out):
-        fastq_out = f'{fastq_out_specified[:-len(suf)]}_{i}{suf}'
-        i+=1
-    if i != 1:
-        helper.warning_msg(f"Filename {fastq_out_specified} exists, will output demultiplexed reads into {fastq_out}.")
+    if not helper.check_suffix(out_raw_bc_fn, '.csv'):
+        helper.err_msg(
+            f"Error in filename configuration:"
+            f"Filename '{out_raw_bc_fn}' should end with '.csv'. Please check the config.py file in BLAZE.")
+        sys.exit(1)
 
-    return fastq_fns, fastq_out, n_process, exp_cells ,min_phred_score, \
-            full_bc_whitelist, out_raw_bc, out_whitelist, \
-            high_sensitivity_mode, batch_size, emptydrop, emptydrop_max_count
+    if not helper.check_suffix(out_whitelist_fn, '.csv'):
+        helper.err_msg(
+            f"Error in filename configuration:"
+            f"Filename '{out_whitelist_fn}' should end with '.csv'. Please check the config.py file in BLAZE.")
+        sys.exit(1)
+
+    if not helper.check_suffix(out_emptydrop_fn, '.csv'):
+        helper.err_msg(
+            f"Error in filename configuration:"
+            f"Filename '{out_emptydrop_fn}' should end with '.csv'. Please check the config.py file in BLAZE.")
+        sys.exit(1)
+    if not helper.check_suffix(out_plot_fn, '.png'):
+        helper.err_msg(
+            f"Error in filename configuration:"
+            f"Filename '{out_plot_fn}' should end with '.png'. Please check the config.py file in BLAZE.")
+        sys.exit(1)
+    
+    # helper.warning_msg(f"Filename {out_fastq_fn} exists, will output demultiplexed reads into {out_fastq_fn}.")
+
+    return fastq_fns, out_fastq_fn, n_process, exp_cells ,min_phred_score, \
+            full_bc_whitelist, out_raw_bc_fn, out_whitelist_fn, \
+            high_sensitivity_mode, batch_size, out_emptydrop_fn, emptydrop_max_count, overwrite, out_plot_fn
 
 # Parse fastq -> polyT_adaptor_finder.Read class
 def get_raw_bc_from_reads(reads, min_q=0):
@@ -343,7 +353,8 @@ def qc_report(pass_count, min_phred_score):
     
 def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None, 
                     count_t=None, high_sensitivity_mode=False, 
-                    output_empty = False, empty_max_count = np.inf):
+                    output_empty = False, empty_max_count = np.inf, 
+                    out_plot_fn = DEFAULT_KNEE_PLOT_FN):
     f"""    
     Get a whitelist from all putative cell bc with high-confidence putative bc counts. 
     If the expect number is provided (default), a quantile-based threshold will be 
@@ -407,7 +418,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None,
     
     # determine real bc based on the count threshold
     if count_t:
-        knee_plot(list(raw_bc_count.values()), count_t)
+        knee_plot(list(raw_bc_count.values()), count_t, out_plot_fn)
         cells_bc = {k:v for k,v in raw_bc_count.items() if v > count_t}
 
         if not output_empty:
@@ -431,7 +442,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None,
 
     elif exp_cells:
         t = percentile_count_thres(list(raw_bc_count.values()), exp_cells)
-        knee_plot(list(raw_bc_count.values()), t)
+        knee_plot(list(raw_bc_count.values()), t, out_plot_fn)
 
         cells_bc = {k:v for k,v in raw_bc_count.items() if v > t}
         
@@ -457,7 +468,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None,
     else: 
         raise ValueError('Invalid value of count_t and/or exp_cells.')
 
-def knee_plot(counts, threshold=None):
+def knee_plot(counts, threshold=None, out_fn = 'knee_plot.png'):
     """
     Plot knee plot using the high-confidence putative BC counts
 
@@ -473,11 +484,7 @@ def knee_plot(counts, threshold=None):
     plt.ylabel('Read counts')
     plt.axhline(y=threshold, color='r', linestyle='--', label = 'cell calling threshold')
     plt.legend()
-    
-    out_fn = 'knee_plot'
-    while os.path.exists(out_fn + '.png'):
-        out_fn += '_update'
-    plt.savefig(out_fn + '.png')
+    plt.savefig(out_fn)
 
 
 def read_batch_generator(fastq_fns, batch_size):
@@ -504,89 +511,144 @@ def read_batch_generator(fastq_fns, batch_size):
 
 def main(argv=None):
     
-    fastq_fns, fastq_out, n_process, exp_cells ,min_phred_score, full_bc_whitelist,\
-        out_raw_bc, out_whitelist, high_sensitivity_mode, \
-        batch_size, emptydrop, emptydrop_max_count = parse_arg(argv)
+    fastq_fns, out_fastq_fn, n_process, exp_cells ,min_phred_score, \
+        full_bc_whitelist, out_raw_bc_fn, out_whitelist_fn, \
+        high_sensitivity_mode, batch_size, out_emptydrop_fn, emptydrop_max_count, \
+        overwrite, out_plot_fn = parse_arg(argv)
     
     ######################
     ###### Getting putative barcodes
     ######################
-    logger.info(f'Getting putative barcodes from {len(fastq_fns)} FASTQ files...')
-    read_batchs = read_batch_generator(fastq_fns, batch_size=batch_size)
-    rst_futures = helper.multiprocessing_submit(get_raw_bc_from_reads,
-                                            read_batchs, n_process=n_process, 
-                                            min_q=min_phred_score)
+    if not os.path.exists(out_raw_bc_fn) or overwrite:
+        if os.path.exists(out_raw_bc_fn) and overwrite:
+            logger.info(helper.warning_msg(
+                f"The output putative barcodes table {out_raw_bc_fn} exist. It will be overwritten...",
+                 printit = False))
+        logger.info(f'Getting putative barcodes from {len(fastq_fns)} FASTQ files...')
+        read_batchs = read_batch_generator(fastq_fns, batch_size=batch_size)
+        rst_futures = helper.multiprocessing_submit(get_raw_bc_from_reads,
+                                                read_batchs, n_process=n_process, 
+                                                min_q=min_phred_score)
 
-    raw_bc_count = Counter([])
-    raw_bc_pass_count = Counter([])    
-    rst_dfs = []
-    for idx, f in enumerate(rst_futures):
-        count_bc, count_pass, rst_df = f.result() #write rst_df out
+        raw_bc_count = Counter([])
+        raw_bc_pass_count = Counter([])    
+        rst_dfs = []
+        for idx, f in enumerate(rst_futures):
+            count_bc, count_pass, rst_df = f.result() #write rst_df out
 
-        raw_bc_count += count_bc
-        raw_bc_pass_count += count_pass
-        if idx == 0:
-            rst_df.to_csv(out_raw_bc+'.csv', index=False)
-        else:
-            rst_df.to_csv(out_raw_bc+'.csv', mode='a', index=False, header=False)
+            raw_bc_count += count_bc
+            raw_bc_pass_count += count_pass
+            if idx == 0:
+                rst_df.to_csv(out_raw_bc_fn, index=False)
+            else:
+                rst_df.to_csv(out_raw_bc_fn, mode='a', index=False, header=False)
+        
+        helper.green_msg(f'Putative barcode table saved in {out_raw_bc_fn}')
+        
+        # output
+        print('\n----------------------stats of the putative barcodes--------------------------')
+        qc_report(raw_bc_pass_count, min_phred_score = min_phred_score)
+        print('-----------------------------------------------------\n')
     
-    helper.green_msg(f'Putative barcode table saved in {out_raw_bc}.csv')
-    
-    # output
-    print('\n----------------------stats of the putative barcodes--------------------------')
-    qc_report(raw_bc_pass_count, min_phred_score = min_phred_score)
-    print('-----------------------------------------------------\n')
-    
-    
-    
+    else:
+        logger.info(helper.warning_msg(textwrap.dedent(
+            f"""
+            Warning: {out_raw_bc_fn} exists. BLAZE would NOT re-generate the file and the existing file 
+            will be directly used for downstream steps. If you believe it needs to be updated, please
+            change the --output_prefix or remove/rename the existing file. 
+            
+            Note: there is no need to update this file if the input data remain the same and the previous
+            run that generated this file finished successfully. It wouldn't change with other specified 
+            arguments . However if you are running using a modified config.py file or the existing  {out_raw_bc_fn}
+            was generated by a different version of BLAZE, updating is suggested.
+            """
+        ), printit = False))
+            # read table
+        dfs = pd.read_csv(out_raw_bc_fn, chunksize=1_000_000)
+        
+        # get bc count dict (filtered by minQ)
+        
+        raw_bc_count = Counter()
+        for df in tqdm(dfs, desc = 'Counting high-quality putative BC'):
+            raw_bc_count += Counter(df[
+                df.putative_bc_min_q >=min_phred_score].putative_bc.value_counts().to_dict())
+            
+        
     ######################
     ###### Whitelisting
     ######################
-    logger.info("Getting whitelist...\n")
-    
-    
-    
-    try:
-        bc_whitelist, ept_bc = get_bc_whitelist(raw_bc_count,
-                                full_bc_whitelist, 
-                                exp_cells=exp_cells,
-                                high_sensitivity_mode=high_sensitivity_mode,
-                                output_empty=emptydrop,
-                                empty_max_count=emptydrop_max_count)
-        with open(out_whitelist+'.csv', 'w') as f:
-            for k in bc_whitelist.keys():
-                f.write(k+'-1\n')
+    if not os.path.exists(out_whitelist_fn) or overwrite:
+        if overwrite or not os.path.exists(out_emptydrop_fn):
+            logger.info("Getting barcode whitelist and empty droplet barcode list...\n")
 
-        if len(ept_bc):
-            with open(DEFAULT_EMPTY_DROP_FN, 'w') as f:
+        if overwrite:
+            logger.info(helper.warning_msg(
+                f"Warning: {out_whitelist_fn} and {out_emptydrop_fn} will be overwritten if exist...",
+            ))
+
+        elif os.path.exists(out_emptydrop_fn):
+            logger.info(helper.warning_msg(
+                f"Warning: {out_whitelist_fn} doesn't exist, {out_emptydrop_fn} and {out_plot_fn} will be overwritten if exist...",
+            ))
+
+        try:
+            bc_whitelist, ept_bc = get_bc_whitelist(raw_bc_count,
+                                    full_bc_whitelist, 
+                                    exp_cells=exp_cells,
+                                    high_sensitivity_mode=high_sensitivity_mode,
+                                    output_empty=True,
+                                    empty_max_count=emptydrop_max_count,
+                                    out_plot_fn = out_plot_fn)
+            with open(out_whitelist_fn, 'w') as f:
+                for k in bc_whitelist.keys():
+                    f.write(k+'-1\n')
+
+            with open(out_emptydrop_fn, 'w') as f:
                 for k in ept_bc:
                     f.write(k+'-1\n')
-            helper.green_msg(f'Whitelist saved as {DEFAULT_EMPTY_DROP_FN}.')    
+                helper.green_msg(f'Empty droplet barcode list saved as {out_emptydrop_fn}.')    
 
-    except Exception as e:
-        logger.exception(e)
-        helper.err_msg(
-            "Error: Failed to get whitelist. Please check the input files and settings."\
-            "Note that the whilelist can be obtained"\
-            f"from {out_raw_bc}.csv by using update_whitelist.py."\
-            "Run \"python3 BLAZE/bin/update_whitelist.py -h\"  for more details."
-            )
-    else:
-        helper.green_msg(f'Whitelist saved as {out_whitelist}.csv!')
+        except Exception as e:
+            logger.exception(e)
+            helper.err_msg(
+                "Error: Failed to get whitelist. Please check the input files and settings."
+                )
+        else:
+            helper.green_msg(f'Whitelist saved as {out_whitelist_fn}!')
 
-
+    elif os.path.exists(out_whitelist_fn) and not overwrite:
+        logger.info(helper.warning_msg(
+                f"Warning: {out_whitelist_fn} exist, the whitelisting step will be skipped."
+                , printit = False))
+        if not os.path.exists(out_emptydrop_fn):
+            logger.info(helper.warning_msg(
+                f"Warning: BLAZE will use existing {out_whitelist_fn} for the downstread steps and will not re-generate the {out_emptydrop_fn}."
+                f"If the file is required, please remove/rename the existing {out_whitelist_fn} and rerun."
+            , printit = False))
+        if not os.path.exists(out_plot_fn):
+            logger.info(helper.warning_msg(
+                f"Warning: BLAZE will use existing {out_whitelist_fn} for the downstread steps and will not re-generate the {out_plot_fn}."
+                f"If the file is required, please remove/rename the existing {out_whitelist_fn} and rerun."
+            , printit = False))
+    
     ######################
     ###### Demultiplexing
     ######################
-    logger.info("Assigning reads to whitelist.\n")
-    read_assignment.main_multi_thread(fastq_fns, 
-                                      fastq_out, 
-                                      f'{out_raw_bc}.csv', 
-                                      f'{out_whitelist}.csv',
-                                      DEFAULT_ASSIGNMENT_ED,
-                                      n_process,
-                                      True, 
-                                      batch_size)
+    if not os.path.exists(out_fastq_fn) or overwrite:
+        
+        if overwrite:
+            logger.info(helper.warning_msg(
+                f"Warning:  {out_fastq_fn} will be overwritten if exist...",
+            ))
+        logger.info("Assigning reads to whitelist.\n")
+        read_assignment.main_multi_thread(fastq_fns, 
+                                        out_fastq_fn, 
+                                        out_raw_bc_fn, 
+                                        out_whitelist_fn,
+                                        DEFAULT_ASSIGNMENT_ED,
+                                        n_process,
+                                        out_fastq_fn.endswith('.gz'), 
+                                        batch_size)
 
 if __name__ == '__main__':
     main()

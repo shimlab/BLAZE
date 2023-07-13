@@ -219,7 +219,8 @@ def assign_barcodes(putative_bc_csv, whitelsit_csv, n_process, max_ed):
     logger.info(helper.green_msg(f"Demultiplexing finshied: ", printit = False))
     return df
 
-def main_multi_thread(fastq_fns, fastq_out, putative_bc_csv, whitelsit_csv, max_ed, n_process, gz, batchsize):
+def main_multi_thread(fastq_fns, fastq_out, putative_bc_csv, 
+                      whitelsit_csv, max_ed, n_process, gz, batchsize):
     class read_fastq:
         """This class is for mimic the SeqIO fastq record. The SeqIO is not directly used because it's slow.
         """
@@ -280,7 +281,7 @@ def main_multi_thread(fastq_fns, fastq_out, putative_bc_csv, whitelsit_csv, max_
         tmp_files.append(f.result())
     logger.info(f"Concatenating tmp fastq files to {fastq_out}")
     helper.concatenate_files(fastq_out, *tmp_files)
-    logger.info(helper.green_msg(f"Demultiplexing completed!", printit = False))
+    logger.info(helper.green_msg(f"Demultiplexed read saved in {fastq_out}!", printit = False))
 
 
 # def main_single_thread_wrt(fastq_fns, fastq_out, putative_bc_csv, whitelsit_csv, n_process, gz, batchsize):

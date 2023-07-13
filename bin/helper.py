@@ -26,11 +26,14 @@ def err_msg(msg):
 	CRED = '\033[91m'
 	CEND = '\033[0m'
 	print(CRED + msg + CEND)	
-
-def warning_msg(msg):
-	CRED = '\033[93m'
-	CEND = '\033[0m'
-	print(CRED + msg + CEND)
+        
+def warning_msg(msg, printit = True):
+    CRED = '\033[93m'
+    CEND = '\033[0m'
+    if printit:
+        print(CRED + msg + CEND)
+    else:
+        return CRED + msg + CEND
 
 def green_msg(msg, printit = True):
     CRED = '\033[92m'
@@ -224,7 +227,7 @@ def get_files(search_dir, extensions, recursive=True):
             files.extend(Path(search_dir).glob(i))
         return files
 
-# check file exist
+# check file exist. Exit if not
 def check_exist(file_list):
     exit_code = 0
     for fn in file_list:
@@ -250,3 +253,18 @@ def batch_iterator(iterator, batch_size):
             i = 0
     if len(batch):
         yield batch
+
+# validate filename (check suffix):
+def check_suffix(filename, suffix_lst):
+    """check the suffix of a filename
+    Args:
+        filename (str)
+        suffix_lst (list/str)
+    """
+    # check output filenames
+    if isinstance(suffix_lst, str):
+        return filename.endswith(suffix_lst)
+    if any([filename.endswith(x) for x in suffix_lst]):
+        return True
+    else: 
+        return False

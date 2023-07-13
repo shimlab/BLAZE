@@ -3,11 +3,13 @@
 import os
 import numpy as np
 
+## Output prefix
+DEFAULT_PREFIX = ''
+
 ####################################################
 ############# polyT and adaptor finding#############
 ####################################################
 ## adaptor finding
-
 ADPT_SEQ='CTTCCGATCT' #searched adaptor sequence
 ADPT_WIN=200 #search adaptor in subsequence from both end of the reads with this size
 ADPT_MIN_MATCH_PROP=0.8 #minimum proportion of match required when searching
@@ -34,8 +36,8 @@ DEFAULT_GRB_WHITELIST_V2=\
         os.path.join(os.path.dirname(__file__), '../10X_bc/737K-august-2016.txt')
 
 #output
-DEFAULT_GRB_OUT_RAW_BC='putative_bc'
-DEFAULT_GRB_OUT_WHITELIST = 'whitelist'
+DEFAULT_GRB_OUT_RAW_BC='putative_bc.csv'
+DEFAULT_GRB_OUT_WHITELIST = 'whitelist.csv'
 DEFAULT_GRB_OUT_FASTQ = "matched_read.fastq.gz"
 DEFAULT_GRB_FLANKING_SIZE = 5
 
@@ -52,7 +54,8 @@ def high_sensitivity_threshold_calculation(count_array, exp_cells):
     return np.quantile(top_count, 0.95)/200
 
 # list for empty drops (output in high-sensitivity mode)
-DEFAULT_EMPTY_DROP_FN = 'emtpy_bc.csv'
+DEFAULT_EMPTY_DROP_FN = 'emtpy_bc_list.csv'
+DEFAULT_KNEE_PLOT_FN = 'knee_plot.png'
 DEFAULT_EMPTY_DROP_MIN_ED = 5 # minimum edit distance from emtpy drop BC to selected BC
 DEFAULT_EMPTY_DROP_NUM = 2000 # number of BC in the output
     
