@@ -516,6 +516,12 @@ def main(argv=None):
         high_sensitivity_mode, batch_size, out_emptydrop_fn, emptydrop_max_count, \
         overwrite, out_plot_fn = parse_arg(argv)
     
+
+    print(textwrap.dedent(
+    f'''\n\nWelcome to 
+        {BLAZE_LOGO}
+    '''
+    ))
     ######################
     ###### Getting putative barcodes
     ######################
@@ -584,11 +590,13 @@ def main(argv=None):
         if overwrite:
             logger.info(helper.warning_msg(
                 f"Warning: {out_whitelist_fn} and {out_emptydrop_fn} will be overwritten if exist...",
+                printit = False
             ))
 
         elif os.path.exists(out_emptydrop_fn):
             logger.info(helper.warning_msg(
                 f"Warning: {out_whitelist_fn} doesn't exist, {out_emptydrop_fn} and {out_plot_fn} will be overwritten if exist...",
+                printit = False
             ))
 
         try:
@@ -639,6 +647,7 @@ def main(argv=None):
         if overwrite:
             logger.info(helper.warning_msg(
                 f"Warning:  {out_fastq_fn} will be overwritten if exist...",
+                printit = False
             ))
         logger.info("Assigning reads to whitelist.\n")
         read_assignment.main_multi_thread(fastq_fns, 

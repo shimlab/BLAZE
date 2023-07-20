@@ -3,7 +3,6 @@ import multiprocessing as mp
 import tempfile
 import pandas as pd
 import numpy as np
-import swifter
 import gzip
 import Bio
 from Bio import SeqIO
@@ -175,6 +174,7 @@ def batch_barcode_to_fastq(read_batches_with_idx, assignment_df ,gz = True):
     output_handle.close()
     return temp_file.name
 
+
 def assign_barcodes(putative_bc_csv, whitelsit_csv, n_process, max_ed):
     """Read the putative barcodes as pd.dataframe,
     Assign all putative barcode to whiteliested barcode, 
@@ -202,21 +202,27 @@ def assign_barcodes(putative_bc_csv, whitelsit_csv, n_process, max_ed):
             whitelist.append(line.split('-')[0])
     whitelist = set(whitelist)
 
-    # df['BC_corrected'] =\
-    #   df['putative_bc'].\
-    #     swifter.allow_dask_on_strings(enable=True).\
+    # df[['BC_corrected','putative_umi']] =\
+    #   df.swifter.allow_dask_on_strings(enable=True).\
     #         set_dask_scheduler('processes').\
     #             set_npartitions(n_process).\
-    #                 apply(match_bc, whitelist=whitelist, max_ed=max_ed)
+    #                 apply(match_bc_row, axis=1, whitelist=whitelist, max_ed=max_ed)
     
-
+    # df[['BC_corrected','putative_umi']] =\
+    #     helper.df_multiproceccing_apply(df, 
+    #                                     lambda x: x.apply(, axis=1, whitelist=whitelist, max_ed=max_ed),
+    #                                     npartitions = n_process)
+    
     df[['BC_corrected','putative_umi']] =\
-      df.swifter.allow_dask_on_strings(enable=True).\
-            set_dask_scheduler('processes').\
-                set_npartitions(n_process).\
-                    apply(match_bc_row, axis=1, whitelist=whitelist, max_ed=max_ed)
-    
+        helper.df_multiproceccing_apply(df, 
+                                        match_bc_row,
+                                        npartitions = n_process,
+                                        max_ed = max_ed,
+                                        whitelist=whitelist
+                                        )
+
     logger.info(helper.green_msg(f"Demultiplexing finshied: ", printit = False))
+    logger.info(helper.green_msg(f"Successfully demultiplexed reads / Total reads: {sum(df.BC_corrected!='')} / {len(df.BC_corrected)}. ", printit = False))
     return df
 
 def main_multi_thread(fastq_fns, fastq_out, putative_bc_csv, 
@@ -242,7 +248,7 @@ def main_multi_thread(fastq_fns, fastq_out, putative_bc_csv,
             if str(fn).endswith('.gz'):
                 with gzip.open(fn, "rt") as handle:
                     fastq =\
-                         (read_fastq(title, sequence, qscore) for title, sequence, qscore in Bio.SeqIO.QualityIO.FastqGeneralIterator(handle))
+                        (read_fastq(title, sequence, qscore) for title, sequence, qscore in Bio.SeqIO.QualityIO.FastqGeneralIterator(handle))
 
                     batch_iter = helper.batch_iterator(fastq, batch_size=batch_size)
                     
@@ -268,9 +274,10 @@ def main_multi_thread(fastq_fns, fastq_out, putative_bc_csv,
 
     logger.info("Reads assignment completed.")
     logger.info(f"Writing to tmp fastq files...")
-    rst_futures = helper.multithreading_submit(batch_barcode_to_fastq, 
+    rst_futures = helper.multiprocessing_submit(batch_barcode_to_fastq, 
                            r_batches_with_idx, 
-                           threads=n_process*4,
+                           n_process=n_process*4,
+                           schduler = "thread",
                            pbar_func=lambda x: len(x[0]),
                             assignment_df = assignment_df,
                             gz = gz)

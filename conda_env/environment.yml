@@ -12,4 +12,3 @@ dependencies:
   - pip
   - pip:
     - fast-edit-distance==1.2.0
-    - swifter

@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import multiprocessing as mp
@@ -96,24 +97,37 @@ class param:
                 self.__dict__[attr] = None
         return check_res if not silent else True
     
-# multiprocessing
-# def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1, pbar = True, *arg, **kwargs):
-#     executor = concurrent.futures.ProcessPoolExecutor(n_process)
-#     if pbar:
-#         #pbar = tqdm(total=len(iterator))
-#         pbar = tqdm()
-#     futures = [executor.submit(func, i, *arg, **kwargs) for i in iterator]
-#     for future in as_completed(futures):
-#         print(111)
-#         pbar.update(1)
-#     return futures
-def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = True, pbar_unit='Read',pbar_func=len, *arg, **kwargs):
-    executor = concurrent.futures.ProcessPoolExecutor(n_process)
-    
-    # A dictionary which will contain the  future object
-    max_queue = n_process
+
+def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
+                           pbar = True, pbar_unit='Read',pbar_func=len, 
+                           schduler = 'process', *arg, **kwargs):
+    """multiple processing or threading, 
+
+    Args:
+        func: function to be run parallely
+        iterator: input to the function in each process/thread
+        n_process (int, optional): number of cores or threads. Defaults to mp.cpu_count()-1.
+        pbar (bool, optional): Whether or not to output a progres bar. Defaults to True.
+        pbar_unit (str, optional): Unit shown on the progress bar. Defaults to 'Read'.
+        pbar_func (function, optional): Function to calculate the total length of the progress bar. Defaults to len.
+        schduler (str, optional): 'process' or 'thread'. Defaults to 'process'.
+
+    Yields:
+        return type of the func: the yield the result in the order of submit
+    """
+    if schduler == 'process':
+        executor = concurrent.futures.ProcessPoolExecutor(n_process)
+    elif schduler == 'thread':
+        executor = concurrent.futures.ThreadPoolExecutor(n_process)
+    else:
+        green_msg('Error in multiprocessing_submit: schduler should be either process or thread', printit=True)
+        sys.exit(1)
     if pbar:
         pbar = tqdm(unit = pbar_unit, desc='Processed')
+        
+
+    # A dictionary which will contain the future object
+    max_queue = n_process + 10
 
     futures = {}
     n_job_in_queue = 0
@@ -126,7 +140,7 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = Tr
     while True:
         while n_job_in_queue < max_queue:
             i = next(iterator, None)
-            if not i:
+            if i is None:
                 break
             futures[executor.submit(func, i, *arg, **kwargs)] = (pbar_func(i),job_idx)
             job_idx += 1
@@ -157,55 +171,32 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,pbar = Tr
                 job_to_yield += 1
             break
 
-def multithreading_submit(func, iterator, threads=mp.cpu_count()-1 ,pbar = True, pbar_unit='Read',pbar_func=len,*arg, **kwargs):
-    executor = concurrent.futures.ThreadPoolExecutor(threads)
+
+# multiproces panda data frame  
+def procee_batch(df,  row_func, *arg, **kwargs):
+        return df.apply(row_func, axis=1, *arg, **kwargs)
+
+def df_multiproceccing_apply(df, func, npartitions, aggr_func=pd.concat, pbar = True, pbar_unit='Read',pbar_func=len,*arg, **kwargs):
+    """This is a re-implementation which is very similar to dask apply. 
+    """
+    def sub_df_generator(df, n_part = npartitions):
+        """ 
+        Generator: split a large df by row into multiple 
+        """
+        sub_size = int(np.ceil(len(df) / n_part))
+        for i in range(n_part):
+            yield df.iloc[i*sub_size:i*sub_size+sub_size,]
+
+
+            
+    df_iter = sub_df_generator(df)
+    rst_futures = multiprocessing_submit(procee_batch, df_iter, n_process=mp.cpu_count()-1 ,
+                           pbar = pbar, pbar_unit=pbar_unit,pbar_func=pbar_func, 
+                           schduler = 'process', row_func = func, *arg, **kwargs)
+
+    rsts = [x.result() for x in rst_futures]
+    return aggr_func(rsts)
     
-    # A dictionary which will contain the  future object
-    max_queue = threads+10
-    if pbar:
-        pbar = tqdm(unit = pbar_unit, desc='Processed')
-
-    futures = {}
-    n_job_in_queue = 0
-    
-    # make sure the result is yield in the order of submit.
-    job_idx = 0
-    job_to_yield = 0
-    job_completed = {}
-
-    while True:
-        while n_job_in_queue < max_queue:
-            i = next(iterator, None)
-            if not i:
-                break
-            futures[executor.submit(func, i, *arg, **kwargs)] = (pbar_func(i),job_idx)
-            job_idx += 1
-            n_job_in_queue += 1
-
-        # will wait until as least one job finished
-        # batch size as value, release the cpu as soon as one job finished
-        job = next(as_completed(futures), None)
-        # no more job  
-        if job is not None:
-            job_completed[futures[job][1]] = job, futures[job][0]
-            del futures[job]
-            #print(job_completed.keys())
-            # check order
-            if  job_to_yield in job_completed.keys():
-                n_job_in_queue -= 1
-                # update pregress bar based on batch size
-                pbar.update(job_completed[job_to_yield][1])
-                yield job_completed[job_to_yield][0]
-                del job_completed[job_to_yield]
-                job_to_yield += 1
-        # all jobs finished: yield complelted job in the submit order
-        else:
-            while len(job_completed):
-                pbar.update(job_completed[job_to_yield][1])
-                yield job_completed[job_to_yield][0]
-                del job_completed[job_to_yield]
-                job_to_yield += 1
-            break
 
 # concatenate multiple files
 def concatenate_files(output_file, *input_files):
