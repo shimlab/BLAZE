@@ -38,7 +38,7 @@ DEFAULT_GRB_WHITELIST_V2=\
 #output
 DEFAULT_GRB_OUT_RAW_BC='putative_bc.csv'
 DEFAULT_GRB_OUT_WHITELIST = 'whitelist.csv'
-DEFAULT_GRB_OUT_FASTQ = "matched_read.fastq.gz"
+DEFAULT_GRB_OUT_FASTQ = "matched_reads.fastq.gz"
 DEFAULT_GRB_FLANKING_SIZE = 5
 
 ####################################################
