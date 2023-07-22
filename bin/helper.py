@@ -158,14 +158,16 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
             if  job_to_yield in job_completed.keys():
                 n_job_in_queue -= 1
                 # update pregress bar based on batch size
-                pbar.update(job_completed[job_to_yield][1])
+                if pbar:
+                    pbar.update(job_completed[job_to_yield][1])
                 yield job_completed[job_to_yield][0]
                 del job_completed[job_to_yield]
                 job_to_yield += 1
         # all jobs finished: yield complelted job in the submit order
         else:
             while len(job_completed):
-                pbar.update(job_completed[job_to_yield][1])
+                if pbar:
+                    pbar.update(job_completed[job_to_yield][1])
                 yield job_completed[job_to_yield][0]
                 del job_completed[job_to_yield]
                 job_to_yield += 1
