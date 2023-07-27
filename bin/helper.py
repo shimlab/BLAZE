@@ -99,7 +99,7 @@ class param:
     
 
 def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
-                           pbar = True, pbar_unit='Read',pbar_func=len, 
+                           pbar=True, pbar_unit='Read',pbar_func=len, 
                            schduler = 'process', *arg, **kwargs):
     """multiple processing or threading, 
 
@@ -123,12 +123,10 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
         green_msg('Error in multiprocessing_submit: schduler should be either process or thread', printit=True)
         sys.exit(1)
     if pbar:
-        pbar = tqdm(unit = pbar_unit, desc='Processed')
+        _pbar = tqdm(unit=pbar_unit, desc='Processed')
         
-
     # A dictionary which will contain the future object
     max_queue = n_process + 10
-
     futures = {}
     n_job_in_queue = 0
     
@@ -159,7 +157,7 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
                 n_job_in_queue -= 1
                 # update pregress bar based on batch size
                 if pbar:
-                    pbar.update(job_completed[job_to_yield][1])
+                    _pbar.update(job_completed[job_to_yield][1])
                 yield job_completed[job_to_yield][0]
                 del job_completed[job_to_yield]
                 job_to_yield += 1
@@ -167,12 +165,11 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
         else:
             while len(job_completed):
                 if pbar:
-                    pbar.update(job_completed[job_to_yield][1])
+                    _pbar.update(job_completed[job_to_yield][1])
                 yield job_completed[job_to_yield][0]
                 del job_completed[job_to_yield]
                 job_to_yield += 1
             break
-
 
 # multiproces panda data frame  
 def procee_batch(df,  row_func, *arg, **kwargs):

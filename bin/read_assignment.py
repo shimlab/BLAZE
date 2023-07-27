@@ -66,15 +66,25 @@ def match_bc_row(row, whitelist, max_ed):
             '': if no barcode was found in the whitelist
             'ambiguous': if multiple barcode was found in the whitelist
         2. adjusted putative_umi
+        3. strand '+' for read with positive strand (start with BC,umi,polyT...), 
+                  '-' for read with negative strand
 
     """
-    bc = row.putative_bc
-    if not bc:
-        return pd.Series(['', row.putative_umi])
-    if bc in whitelist:
-        return pd.Series([bc, row.putative_umi])
+    if not row.umi_end:
+        strand = ''
+    elif row.umi_end > 0:
+        strand = '+'
+    else: 
+        strand = '-'
+
+    if not row.putative_bc or row.putative_bc in whitelist:
+        return pd.Series([row.putative_bc, row.putative_umi, strand])
+    else:
+        bc = row.putative_bc
+    
     best_ed = max_ed
     bc_hit = ''
+    # extending the putative barcode from both sides for potential indels
     bc = row.pre_bc_flanking[-DEFAULT_ED_FLANKING:] + bc + row.putative_umi[:DEFAULT_ED_FLANKING]
     for i in whitelist:
         ed, end_idx = sub_edit_distance(i, bc, best_ed) 
@@ -88,10 +98,14 @@ def match_bc_row(row, whitelist, max_ed):
                 bc_hit = 'ambiguous'
                 best_ed -= 1
                 if best_ed < 0:
-                    return pd.Series(['', row.putative_umi])
-    if bc_hit == 'ambiguous' or not bc_hit:
-        return pd.Series(['', row.putative_umi])
+                    return pd.Series(['', row.putative_umi, strand])
     
+    if bc_hit == 'ambiguous' or not bc_hit:
+        return pd.Series(['', row.putative_umi, strand])
+    else:
+        pass
+
+    # adjust the umi start position
     umi_adj = end_idx - (len(bc) - 1 -DEFAULT_ED_FLANKING )
     out_umi = row.putative_umi
     if umi_adj > 0:
@@ -100,7 +114,7 @@ def match_bc_row(row, whitelist, max_ed):
         out_umi =  row.putative_bc[umi_adj:] + row.putative_umi[:umi_adj]
     
 
-    return pd.Series([bc_hit, out_umi])
+    return pd.Series([bc_hit, out_umi, strand])
             
 # Function to modify the header
 def fastq_modify_header(record, barcode, UMI):
@@ -151,11 +165,10 @@ def batch_barcode_to_fastq(read_batches_with_idx, assignment_df ,gz = True):
         try:
             assert row.read_id == r.id            
         except AssertionError:
-            
             helper.err_msg("Different order in putative bc file and input fastq!")
             sys.exit()
 
-        if not row.putative_bc:
+        if not row.BC_corrected:
             continue
 
         if row.umi_end < 0:
@@ -165,7 +178,7 @@ def batch_barcode_to_fastq(read_batches_with_idx, assignment_df ,gz = True):
             seq = r.seq[int(row.umi_end):]
             qscore = r.qscore[int(row.umi_end):]
         
-        out_buffer += f"@{row.BC_corrected}_{row.putative_umi}#{row.read_id}\n"
+        out_buffer += f"@{row.BC_corrected}_{row.putative_umi}#{row.read_id}_{row.strand}\n"
         out_buffer += str(seq) + '\n'
         out_buffer += '+\n'
         out_buffer += qscore + '\n'
@@ -193,27 +206,16 @@ def assign_barcodes(putative_bc_csv, whitelsit_csv, n_process, max_ed):
     df = df.fillna('') # replace nan with empty string
     # df['putative_umi'] = df['putative_umi'].fillna('')
     # df['pre_bc_flanking'] = df['pre_bc_flanking'].fillna('')
-    # df['post_bc_flanking'] = df['post_bc_flanking'].fillna('')    
-    
+    # df['post_bc_flanking'] = df['post_bc_flanking'].fillna('')   
+
     # read whitelist
     whitelist = [] 
     with open(whitelsit_csv, 'r') as f:
         for line in f:
             whitelist.append(line.split('-')[0])
     whitelist = set(whitelist)
-
-    # df[['BC_corrected','putative_umi']] =\
-    #   df.swifter.allow_dask_on_strings(enable=True).\
-    #         set_dask_scheduler('processes').\
-    #             set_npartitions(n_process).\
-    #                 apply(match_bc_row, axis=1, whitelist=whitelist, max_ed=max_ed)
     
-    # df[['BC_corrected','putative_umi']] =\
-    #     helper.df_multiproceccing_apply(df, 
-    #                                     lambda x: x.apply(, axis=1, whitelist=whitelist, max_ed=max_ed),
-    #                                     npartitions = n_process)
-    
-    df[['BC_corrected','putative_umi']] =\
+    df[['BC_corrected','putative_umi', 'strand']] =\
         helper.df_multiproceccing_apply(df, 
                                         match_bc_row,
                                         npartitions = n_process,
@@ -227,6 +229,8 @@ def assign_barcodes(putative_bc_csv, whitelsit_csv, n_process, max_ed):
 
 def main_multi_thread(fastq_fns, fastq_out, putative_bc_csv, 
                       whitelsit_csv, max_ed, n_process, gz, batchsize):
+    """Main function: Demultiplex fastq files using putative barcode csv and whitelist csv
+    """
     class read_fastq:
         """This class is for mimic the SeqIO fastq record. The SeqIO is not directly used because it's slow.
         """
@@ -266,8 +270,6 @@ def main_multi_thread(fastq_fns, fastq_out, putative_bc_csv,
                         yield batch, read_idx
                         read_idx += batch_len
     
-
-     
     assignment_df = assign_barcodes(putative_bc_csv, whitelsit_csv, n_process, max_ed)
     r_batches_with_idx = \
         read_batch_generator_with_idx(fastq_fns, batchsize)
