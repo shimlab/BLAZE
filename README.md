@@ -1,4 +1,5 @@
 <img src="logo.png" width="300"/>
+# Note: It's currently also a developmental branch where I am moving blaze in to pypi
 
 # Updates of the specific branch compared to the main branch:
 * Using `fast-edit-distance` instead of `Levenshtein` package for generating the empty barcode list
@@ -7,8 +8,26 @@
     * UMI end position (for later trimming the adator-UMI sequence from each reads)
     * Flanking bases before barcode and after UMI (for correction of insertion and deletion within the putative barcode and UMIs)
 * Add function to perform read-to-whitelist assignment. A putative barcode (16nt) with first be extended to include flanking bases from both sides. Then we scan though the whitelist and find the one with lowest subsequence ED (defined as the minimum edits required to make a shorter sequence a subsequence of the longer on). The UMI position will also be corrested if some insertion and deletion found within the 16nt putative barcode.
-* The bases before and included in UMI will be trimmed it the demultiplexed reads. The output format will be in fastq or fastq.gz. The header with be `@<16 nt BC>_<12 bc UMI>#read_id`
+* The bases before and included in UMI will be trimmed it the demultiplexed reads. The output format will be in fastq or fastq.gz. The header with be `@<16 nt BC>_<12 nt UMI>#read_id`
 
+# TODO in this branch:
+- [ ] restructure a code hierachy
+    - Dependency list/ conda env?
+- [ ] Build and test
+- [ ] github workflow for auto pushing to pip
+
+## Intended behaviour:
+* To install: `pip install blaze`
+* To import as a python module:
+    ```
+    import blaze
+
+    # the function inported should be blaze.blaze, blaze.whitelist, blaze.demultiplex
+    ```
+* To run as a excutable:
+    ```
+    blaze [options] fastqs
+    ```
 
 
 # BLAZE (Barcode identification from Long reads for AnalyZing single cell gene Expression)
