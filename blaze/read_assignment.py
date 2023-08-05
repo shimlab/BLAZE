@@ -11,8 +11,8 @@ from tqdm import tqdm
 import logging
 import sys
 
-import helper
-from config import *
+import blaze.helper as helper
+from blaze.config import *
 
 
 # setup logging

@@ -32,10 +32,10 @@ import gzip
 from fast_edit_distance import edit_distance
 import logging
 
-import helper
-from config import *
-import polyT_adaptor_finder 
-import read_assignment
+import blaze.helper as helper
+from blaze.config import *
+import blaze.polyT_adaptor_finder as polyT_adaptor_finder
+import blaze.read_assignment as read_assignment
 from datetime import datetime
 
 # setup logging

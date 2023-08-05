@@ -8,9 +8,9 @@ import sys
 import os
 from tqdm import tqdm
 
-from blaze import get_bc_whitelist
-from config import *
-import helper
+from blaze.blaze import get_bc_whitelist
+from blaze.config import *
+import blaze.helper as helper
 
 
 def parse_arg():

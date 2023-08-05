@@ -4,8 +4,8 @@ import numpy as np
 import Bio
 import Bio.pairwise2
 
-import helper
-from config import *
+import blaze.helper as helper
+from blaze.config import *
 
 class Read(object):
     """class storing all information of read and locating the putative barcodes
