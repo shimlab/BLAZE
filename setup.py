@@ -4,7 +4,7 @@ with open('README.md', 'r') as f:
     long_description = f.read()
 
 setup(
-    name='blaze',
+    name='blaze2',
     version='2.0.0-alpha',
     author='Yupei You',
     author_email="youyupei@gmail.com",
