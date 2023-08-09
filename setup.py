@@ -5,14 +5,14 @@ with open('README.md', 'r') as f:
 
 setup(
     name='blaze2',
-    version='2.0.0a1',
+    version='2.0.0a2',
     author='Yupei You',
     author_email="youyupei@gmail.com",
     description='Barcode identification from Long reads for AnalyZing single cell gene Expression',
     packages=find_packages(),
     long_description=long_description,
     long_description_content_type='text/markdown',
-    data_files=[('blaze2', ['blaze/10X_bc/3M-february-2018.zip', 'blaze/10X_bc/737K-august-2016.txt'])],
+    data_files=[('blaze', ['blaze/10X_bc/3M-february-2018.zip', 'blaze/10X_bc/737K-august-2016.txt'])],
     url="https://github.com/shimlab/BLAZE",
     install_requires=["fast-edit-distance==1.2.1", 
                     'matplotlib', 
