@@ -5,51 +5,25 @@ on:
       - 'v*' # Trigger the workflow when a new tag starting with 'v' is pushed
 
 jobs:
-  build_wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-20.04, windows-2019, macOS-11]
-
+  build-n-publish:
+    name: Build and publish Python distributions to PyPI and TestPyPI
+    runs-on: ubuntu-latest
     steps:
+      - name: setup python
       - uses: actions/checkout@v3
-
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.15.0
+      - uses: actions/setup-python@v4
         with:
-          output-dir: wheelhouse
-
-      - name: Install twine
-        run: |
-          python -m pip install --upgrade pip
-          pip install twine
-      - name: Publish wheels to PyPI
-        env:
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: |
-          twine upload ./wheelhouse/*.whl
-
-
-# jobs:
-
-
-#     steps:
-#       - uses: actions/checkout@v3
-
-#       # Used to host cibuildwheel
-#       - uses: actions/setup-python@v3
-
-#       - name: Install cibuildwheel
-#         run: python -m pip install cibuildwheel==2.15.0
-
-#       - name: Build wheels
-#         run: python -m cibuildwheel --output-dir wheelhouse
-#         # to supply options, put them in 'env', like:
-#         # env:
-#         #   CIBW_SOME_OPTION: value
-
-#       - uses: actions/upload-artifact@v3
-#         with:
-#           path: ./wheelhouse/*.whl
+          python-version: '3.10' 
+    - name: Build pure python wheels
+      run: |
+        python setup.py bdist_wheel
+    - name: Install twine
+      run: |
+        python -m pip install --upgrade pip
+        pip install twine
+    - name: Publish wheels to PyPI
+      env:
+        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run: |
+        twine upload ./dist/*.whl
