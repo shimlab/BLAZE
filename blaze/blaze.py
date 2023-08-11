@@ -51,10 +51,15 @@ def parse_arg(argv):
     def print_help():
         help_message=\
             f'''
-            Usage: python3 {argv[0]}  --expect-cells <INT> [OPTIONS] <fastq directory>
-            
+            Description:
+                BLAZE2 is a tool for demultiplexing 10X single cell long-read RNA-seq data.
+                It takes fastq files as input and output a whitelist of barcodes and a fastq 
+                with demultiplexed reads.
+
+            Usage: blaze  --expect-cells <INT> [OPTIONS] <fastq directory>
+
             Required argument:
-                --expect-cells <INT> (required in current version)
+                --expect-cells <INT> (required)
                             Expected number of cells.
 
             Options:
@@ -64,16 +69,19 @@ def parse_arg(argv):
                 --output-prefix <prefix>
                     Filename of output files. Default: --output-prefix {DEFAULT_PREFIX}
                     Note that the output can be directed to a different directory by specifying
-                    the path in the prefix. For example, --output-prefix /path/to/output/prefix
+                    the path in the prefix. E.g., --output-prefix /path/to/output/prefix
                 
                 --output-fastq <fastq filename>
                     Filename of output fastq file name. Default: --output-fastq {DEFAULT_GRB_OUT_FASTQ}
-                    Note that if the filename has to end with .fastq, .fq, .fastq.gz or .fq.gz,
-                
-                --overwrite
-                    Overwrite the old file when the output file(s) exist. If not specified, 
-                    the steps generating the existing file(s) will be skipped.
+                    Note that if the filename has to end with .fastq, .fq, .fastq.gz or .fq.gz.
 
+                --no-demultiplexing:
+                    Only output the whitelist and do not perform the demultiplexing step.
+                
+                --max-edit-distance <INT>
+                    Maximum edit distance allowed between a putative barcode and a barcode 
+                    for a read/putative barcdoe to be assigned to the barcode. Default: --max-edit-distance {DEFAULT_ASSIGNMENT_ED}
+                
                 --kit-version <v2 or v3>:
                     Choose from 10X Single Cell 3ʹ gene expression v2 or v3. 
                     Default: --kit_version v3.
@@ -82,6 +90,15 @@ def parse_arg(argv):
                     Putative BC contains one or more bases with Q<minQ is not counted 
                     in the "Putative BC rank plot". Default: --minQ=15
                 
+                --full-bc-whitelist <path to file>
+                    txt file containing all the possible BCs. You may provide your own whitelist. 
+                    No need to specify this if users want to use the 10X whilelist. The correct 
+                    version of 10X whilelist will be determined based on 10X kit version.
+
+                --overwrite
+                    Overwrite the old file when the output file(s) exist. If not specified, 
+                    the steps generating the existing file(s) will be skipped.
+
                 --threads <INT>
                     <INT>: Number of threads used <default: # of available cpus - 1>
 
@@ -89,11 +106,6 @@ def parse_arg(argv):
                     <INT>: Number of reads this program process together as a batch. Not that if 
                     the specified number larger than the number of reads in each fastq files, the 
                     batch size will be forced to be the number of reads in the file. <Default: 1000>
-                
-                --full-bc-whitelist <path to file>
-                    txt file containing all the possible BCs. You may provide your own whitelist. 
-                    No need to specify this if users want to use the 10X whilelist. The correct 
-                    version of 10X whilelist will be determined based on 10X kit version.
 
             High sensitivity mode:
                 --high-sensitivity-mode:
@@ -130,13 +142,16 @@ def parse_arg(argv):
     batch_size=1000
     high_sensitivity_mode = False   
     emptydrop_max_count = np.inf
+    do_demultiplexing = True
+    max_edit_distance = DEFAULT_ASSIGNMENT_ED
 
     # Read from options
     try: 
         opts, args = getopt.getopt(argv[1:],"h",
                     ["help","threads=","minQ=","full-bc-whitelist=","high-sensitivity-mode",
                      "output-prefix=", "expect-cells=", "overwrite",
-                     "kit-version=", "batch-size=", "emptydrop-max-count=", "output-fastq="])
+                     "kit-version=", "batch-size=", "emptydrop-max-count=", "output-fastq=",
+                     "no-demultiplexing", "max-edit-distance="])
     except getopt.GetoptError:
         helper.err_msg("Error: Invalid argument input") 
         print_help()
@@ -171,7 +186,10 @@ def parse_arg(argv):
             batch_size = int(arg)
         elif opt == "--emptydrop-max-count":
             emptydrop_max_count = int(arg)
-    
+        elif opt == "--no-demultiplexing":
+            do_demultiplexing = False
+        elif opt == "--max-edit-distance":
+            max_edit_distance = int(arg)
     # output filename:
     out_fastq_fn = prefix + out_fastq_fn
     out_raw_bc_fn = prefix + DEFAULT_GRB_OUT_RAW_BC
@@ -255,7 +273,8 @@ def parse_arg(argv):
 
     return fastq_fns, out_fastq_fn, n_process, exp_cells ,min_phred_score, \
             full_bc_whitelist, out_raw_bc_fn, out_whitelist_fn, \
-            high_sensitivity_mode, batch_size, out_emptydrop_fn, emptydrop_max_count, overwrite, out_plot_fn
+            high_sensitivity_mode, batch_size, out_emptydrop_fn, emptydrop_max_count, \
+            overwrite, out_plot_fn, do_demultiplexing, max_edit_distance
 
 # Parse fastq -> polyT_adaptor_finder.Read class
 def get_raw_bc_from_reads(reads, min_q=0):
@@ -522,7 +541,7 @@ def main(argv=None):
     fastq_fns, out_fastq_fn, n_process, exp_cells ,min_phred_score, \
         full_bc_whitelist, out_raw_bc_fn, out_whitelist_fn, \
         high_sensitivity_mode, batch_size, out_emptydrop_fn, emptydrop_max_count, \
-        overwrite, out_plot_fn = parse_arg(argv)
+        overwrite, out_plot_fn, do_demultiplexing, max_edit_distance = parse_arg(argv)
     
 
     print(textwrap.dedent(
@@ -536,7 +555,7 @@ def main(argv=None):
     if not os.path.exists(out_raw_bc_fn) or overwrite:
         if os.path.exists(out_raw_bc_fn) and overwrite:
             logger.info(helper.warning_msg(
-                f"The output putative barcodes table {out_raw_bc_fn} exist. It will be overwritten...",
+                f"The output putative barcodes table `{out_raw_bc_fn}` exist. It will be overwritten...",
                  printit = False))
         logger.info(f'Getting putative barcodes from {len(fastq_fns)} FASTQ files...')
         read_batchs = read_batch_generator(fastq_fns, batch_size=batch_size)
@@ -567,13 +586,13 @@ def main(argv=None):
     else:
         logger.info(helper.warning_msg(textwrap.dedent(
             f"""
-            Warning: {out_raw_bc_fn} exists. BLAZE would NOT re-generate the file and the existing file 
+            Warning: `{out_raw_bc_fn}` exists. BLAZE would NOT re-generate the file and the existing file 
             will be directly used for downstream steps. If you believe it needs to be updated, please
             change the --output_prefix or remove/rename the existing file. 
             
             Note: there is no need to update this file if the input data remain the same and the previous
             run that generated this file finished successfully. It wouldn't change with other specified 
-            arguments . However if you are running using a modified config.py file or the existing  {out_raw_bc_fn}
+            arguments . However if you are running using a modified config.py file or the existing  `{out_raw_bc_fn}`
             was generated by a different version of BLAZE, updating the file is suggested.
             """
         ), printit = False))
@@ -597,13 +616,13 @@ def main(argv=None):
 
         if overwrite:
             logger.info(helper.warning_msg(
-                f"Warning: {out_whitelist_fn} and {out_emptydrop_fn} will be overwritten if exist...",
+                f"Warning: `{out_whitelist_fn}` and `{out_emptydrop_fn}` will be overwritten if exist...",
                 printit = False
             ))
 
         elif os.path.exists(out_emptydrop_fn):
             logger.info(helper.warning_msg(
-                f"Warning: {out_whitelist_fn} doesn't exist, {out_emptydrop_fn} and {out_plot_fn} will be overwritten if exist...",
+                f"Warning: `{out_whitelist_fn}` doesn't exist, `{out_emptydrop_fn}` and `{out_plot_fn}` will be overwritten if exist...",
                 printit = False
             ))
 
@@ -622,7 +641,7 @@ def main(argv=None):
             with open(out_emptydrop_fn, 'w') as f:
                 for k in ept_bc:
                     f.write(k+'-1\n')
-                helper.green_msg(f'Empty droplet barcode list saved as {out_emptydrop_fn}.')    
+                helper.green_msg(f'Empty droplet barcode list saved as `{out_emptydrop_fn}`.')    
 
         except Exception as e:
             logger.exception(e)
@@ -630,28 +649,27 @@ def main(argv=None):
                 "Error: Failed to get whitelist. Please check the input files and settings."
                 )
         else:
-            helper.green_msg(f'Whitelist saved as {out_whitelist_fn}!')
+            helper.green_msg(f'Whitelist saved as `{out_whitelist_fn}`!')
 
     elif os.path.exists(out_whitelist_fn) and not overwrite:
         logger.info(helper.warning_msg(
-                f"Warning: {out_whitelist_fn} exist, the whitelisting step will be skipped."
+                f"Warning: `{out_whitelist_fn}` exist, the whitelisting step will be skipped."
                 , printit = False))
         if not os.path.exists(out_emptydrop_fn):
             logger.info(helper.warning_msg(
-                f"Warning: BLAZE will use existing {out_whitelist_fn} for the downstread steps and will not re-generate the {out_emptydrop_fn}."
-                f"If the file is required, please remove/rename the existing {out_whitelist_fn} and rerun."
+                f"Warning: BLAZE will use existing `{out_whitelist_fn}` for the downstread steps and will not re-generate the {out_emptydrop_fn}."
+                f"If the file is required, please remove/rename the existing `{out_whitelist_fn}` and rerun."
             , printit = False))
         if not os.path.exists(out_plot_fn):
             logger.info(helper.warning_msg(
-                f"Warning: BLAZE will use existing {out_whitelist_fn} for the downstread steps and will not re-generate the {out_plot_fn}."
-                f"If the file is required, please remove/rename the existing {out_whitelist_fn} and rerun."
+                f"Warning: BLAZE will use existing `{out_whitelist_fn}` for the downstread steps and will not re-generate the {out_plot_fn}."
+                f"If the file is required, please remove/rename the existing `{out_whitelist_fn}` and rerun."
             , printit = False))
     
     ######################
     ###### Demultiplexing
     ######################
-    if not os.path.exists(out_fastq_fn) or overwrite:
-        
+    if do_demultiplexing and (not os.path.exists(out_fastq_fn) or overwrite):
         if overwrite:
             logger.info(helper.warning_msg(
                 f"Warning:  {out_fastq_fn} will be overwritten if exist...",
@@ -662,10 +680,16 @@ def main(argv=None):
                                         out_fastq_fn, 
                                         out_raw_bc_fn, 
                                         out_whitelist_fn,
-                                        DEFAULT_ASSIGNMENT_ED,
+                                        max_edit_distance,
                                         n_process,
                                         out_fastq_fn.endswith('.gz'), 
                                         batch_size)
-
+    elif os.path.exists(out_fastq_fn) and \
+        os.path.getmtime(out_fastq_fn) < os.path.getmtime(out_whitelist_fn):
+        logger.info(helper.warning_msg(
+            f"Warning: The `{out_fastq_fn}` exists and has NOT been updated. However,"
+            f"the existing `{out_fastq_fn}` is older than the upstream output {out_whitelist_fn}."
+            f"If it needs to be re-generated. Please remove/rename the existing `{out_fastq_fn}` and re-run BLAZE "
+        , printit = False))
 if __name__ == '__main__':
     main()
