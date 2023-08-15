@@ -84,6 +84,7 @@ def match_bc_row(row, whitelist, max_ed):
     
     best_ed = max_ed
     bc_hit = ''
+    bc_hit_end_idx = -1
     # extending the putative barcode from both sides for potential indels
     bc = row.pre_bc_flanking[-DEFAULT_ED_FLANKING:] + bc + row.putative_umi[:DEFAULT_ED_FLANKING]
     for i in whitelist:
@@ -91,29 +92,29 @@ def match_bc_row(row, whitelist, max_ed):
         if ed < best_ed:
             best_ed = ed
             bc_hit = i
+            bc_hit_end_idx = end_idx
         elif ed == best_ed:
             if not bc_hit:
                 bc_hit = i
+                bc_hit_end_idx = end_idx
             else: 
                 bc_hit = 'ambiguous'
                 best_ed -= 1
                 if best_ed < 0:
                     return pd.Series(['', row.putative_umi, strand])
     
-    if bc_hit == 'ambiguous' or not bc_hit:
+    if bc_hit == 'ambiguous' or bc_hit == '':
         return pd.Series(['', row.putative_umi, strand])
     else:
         pass
 
     # adjust the umi start position
-    umi_adj = end_idx - (len(bc) - 1 -DEFAULT_ED_FLANKING )
+    umi_adj = bc_hit_end_idx - (len(bc) - 1 -DEFAULT_ED_FLANKING )
     out_umi = row.putative_umi
     if umi_adj > 0:
         out_umi = row.putative_umi[umi_adj:] + row.post_umi_flanking[:umi_adj]
     elif umi_adj < 0:
         out_umi =  row.putative_bc[umi_adj:] + row.putative_umi[:umi_adj]
-    
-
     return pd.Series([bc_hit, out_umi, strand])
             
 # Function to modify the header
