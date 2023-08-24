@@ -147,6 +147,7 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
         # will wait until as least one job finished
         # batch size as value, release the cpu as soon as one job finished
         job = next(as_completed(futures), None)
+        n_job_in_queue -= 1
         # no more job  
         if job is not None:
             job_completed[futures[job][1]] = job, futures[job][0]
@@ -154,7 +155,6 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
             #print(job_completed.keys())
             # check order
             if  job_to_yield in job_completed.keys():
-                n_job_in_queue -= 1
                 # update pregress bar based on batch size
                 if pbar:
                     _pbar.update(job_completed[job_to_yield][1])
