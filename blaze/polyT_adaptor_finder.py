@@ -230,8 +230,9 @@ class Read(object):
                 else:
                     phred_score = self.phred_score
 
-                self.raw_bc_min_q = \
-                    min(phred_score[self.raw_bc_start: self.raw_bc_start+16])
+                bc_phred_score = phred_score[self.raw_bc_start: self.raw_bc_start+16]      
+                self.raw_bc_min_q = min([ord(x) for x in bc_phred_score]) - 33
+
             else:
                 self.raw_bc_min_q = None
         

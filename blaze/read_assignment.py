@@ -4,8 +4,6 @@ import tempfile
 import pandas as pd
 import numpy as np
 import gzip
-import Bio
-from Bio import SeqIO
 import os
 from tqdm import tqdm
 import logging
@@ -253,7 +251,7 @@ def main_multi_thread(fastq_fns, fastq_out, putative_bc_csv,
             if str(fn).endswith('.gz'):
                 with gzip.open(fn, "rt") as handle:
                     fastq =\
-                        (read_fastq(title, sequence, qscore) for title, sequence, qscore in Bio.SeqIO.QualityIO.FastqGeneralIterator(handle))
+                        (read_fastq(title, sequence, qscore) for title, sequence, qscore in helper.fastq_parser(handle))
 
                     batch_iter = helper.batch_iterator(fastq, batch_size=batch_size)
                     
@@ -264,7 +262,7 @@ def main_multi_thread(fastq_fns, fastq_out, putative_bc_csv,
             else:
                 with open(fn) as handle:
                     fastq =\
-                        (read_fastq(title, sequence, qscore) for title, sequence, qscore in Bio.SeqIO.QualityIO.FastqGeneralIterator(handle))
+                        (read_fastq(title, sequence, qscore) for title, sequence, qscore in helper.fastq_parser(handle))
                     read_batch = helper.batch_iterator(fastq, batch_size=batch_size)
                     for batch in read_batch:
                         batch_len = len(batch)

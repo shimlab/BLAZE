@@ -9,6 +9,7 @@ import os
 import sys
 import shutil
 import time
+from collections import namedtuple
 
 def reverse_complement(seq):
 	'''
@@ -243,6 +244,20 @@ def batch_iterator(iterator, batch_size):
             i = 0
     if len(batch):
         yield batch
+
+# a light class for a read in fastq file
+read_tuple = namedtuple('read_tuple', ['id', 'seq', 'q_letter'])
+def fastq_parser(file_handle):
+    while True:
+        id = next(file_handle, None)
+        if id is None:
+            break
+        seq = next(file_handle)
+        next(file_handle) # skip  '+'
+        q_letter = next(file_handle)
+        yield read_tuple(id[1:].split()[0], seq.strip(), q_letter.strip())
+        
+
 
 # validate filename (check suffix):
 def check_suffix(filename, suffix_lst):

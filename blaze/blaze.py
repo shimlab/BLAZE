@@ -311,7 +311,7 @@ def get_raw_bc_from_reads(reads, min_q=0):
         
         # create read object 
         read = polyT_adaptor_finder.Read(read_id = r.id, sequence=str(r.seq), 
-                    phred_score=r.letter_annotations['phred_quality'])    
+                    phred_score=r.q_letter)    
         
 
         read.get_strand_and_raw_bc()
@@ -524,15 +524,16 @@ def read_batch_generator(fastq_fns, batch_size):
     for fn in fastq_fns:
         if str(fn).endswith('.gz'):
             with gzip.open(fn, "rt") as handle:
-                fastq = Bio.SeqIO.parse(handle, "fastq")
+                fastq = helper.fastq_parser(handle)
                 read_batch = helper.batch_iterator(fastq, batch_size=batch_size)
                 for batch in read_batch:
                     yield batch
         else:
-            fastq = Bio.SeqIO.parse(fn, "fastq")
-            read_batch = helper.batch_iterator(fastq, batch_size=batch_size)
-            for batch in read_batch:
-                yield batch
+            with open(fn, "r") as handle:
+                fastq = helper.fastq_parser(handle)
+                read_batch = helper.batch_iterator(fastq, batch_size=batch_size)
+                for batch in read_batch:
+                    yield batch
 
 
 
