@@ -1,8 +1,7 @@
 """Searching for adaptor polyT or poly A in a Nanopore read.
 """
 import numpy as np
-import Bio
-import Bio.pairwise2
+from fast_edit_distance import sub_edit_distance
 
 import blaze.helper as helper
 from blaze.config import *
@@ -42,7 +41,7 @@ class Read(object):
     
     
     def find_adaptor(self,read=None, strand=None, adaptor_seq=ADPT_SEQ, 
-                        num_nt=ADPT_WIN, min_match_prop=ADPT_MIN_MATCH_PROP):
+                        num_nt=ADPT_WIN, max_ed=ADPT_MAC_MATCH_ED):
         '''
         find adaptor from a read
     
@@ -57,36 +56,18 @@ class Read(object):
         adaptor_seq : STR
             10X adaptor sequence, the full-length adaptor sequence is 
             'CTACACGACGCTCTTCCGATCT' (22nt). Last 12nt is used by default.
-        min_match_prop : float
-            min proportion of matches in the alignment. Default: 0.8
+        max_ed : float
+            max edit distance in the adaptor alignment. Default: 2
         Returns
         -------
         Bio.pairwise2.Alignment
         *(adaptor_start, adaptor_end): adaptor start and end position (0-based) in reads
         '''
         # check input
-        try:
-            assert 0<=min_match_prop <= 1
-        except:
-            raise AssertionError('value of min_match_prop must between 0-1.')
-
         strand = self._strand if not strand else strand
         read = self.seq if not read else read
-        
 
-        def min_score(len_adptor, min_match_prop):
-            '''
-            Calculation based on the following alignment metrics:
-                score for a matched base: 2
-                score for a mismatch : -1
-                score for open a gap : -1
-                score for extent a gap: -1
-            The output is rearanged form of :
-                2*len_adaptor - 3 * len_adaptor * (1-min_match_prop)                 
-            '''
-            return len_adptor* (3*min_match_prop - 1)
-
-        def check_poly_T(seq, poly_T_len=PLY_T_LEN, 
+        def find_poly_T(seq, poly_T_len=PLY_T_LEN, 
                               min_match_prop=PLY_T_MIN_MATCH_PROP):
             '''Find poly T in seq
             Parameters
@@ -109,44 +90,56 @@ class Read(object):
                 raise AssertionError('value of min_match_prop must between 0-1.')
 
             # convert to np_array T -> 1 and ACG -> 0
-            
             read_code = np.array([int(x == 'T') for x in seq])
             T_prop = helper.sliding_window_mean(read_code, poly_T_len)
-            return np.any(T_prop >= min_match_prop)
+            return np.where(T_prop >= min_match_prop)[0]  
+
     
         if strand == '-':
             seq = read[:num_nt]
-            
-            # Align adaptor sequencing to seq 
-                # no panelty for skipping the start and end of the seq
-                # score for a matched base: 2
-                # score for a mismatch : -1
-                # score for open a gap : -1
-                # score for extent a gap: -1
-            align = Bio.pairwise2.align.localms(seq, adaptor_seq, 2,-1,-1,-1)
-            
-            # filter out candidate adaptor when no polyT find
-            adp_cand = [a for a in align if a.score >= min_score(len(adaptor_seq), min_match_prop)]
+
+            # find polyT
+            ply_T_idx = find_poly_T(seq)
             d1, d2 = PLY_T_NT_AFT_ADPT
-            adp_cand = [a for a in adp_cand if check_poly_T(read[a.end+d1:a.end+d2])]
-            return {'-':adp_cand} if len(adp_cand) else {}
+            ply_T_idx = ply_T_idx[ply_T_idx >= d1]
+            adpt_ends = []
+            searching_win = []
+            if len(ply_T_idx):
+                # get searching window
+                win_start, win_end = ply_T_idx[0]-d2, ply_T_idx[0]-d1
+                for idx in ply_T_idx:
+                    if idx-d2 > win_end:
+                        searching_win.append((win_start, win_end))
+                        win_start, win_end = idx-d2, idx-d1
+                    else: 
+                        win_end = idx-d1
+                searching_win.append((win_start, win_end))
+
+                for start, end in searching_win:
+                    # check adptor seqence d1~d2 upstream to the polyT
+                    _, sub_seq_end = sub_edit_distance(seq[max(start,0):end], adaptor_seq, max_ed)
+                    # adjust the adaptor end position in related to the read not the flanking sequencce
+                    if sub_seq_end > 0:
+                        adpt_ends.append(max(start,0)+sub_seq_end+1)
+
+            return {'-':list(set(adpt_ends))} if len(adpt_ends) else {}    
+
         
         # take reverse complement if read is coming from transcript strand (with ployA instead ployT)
         if strand == '+':
-            read = helper.reverse_complement(read)
-            adp_cand = self.find_adaptor(
+            read = helper.reverse_complement(read[-1:-num_nt-1:-1])
+            adpt_ends = self.find_adaptor(
                             read, strand='-', adaptor_seq=adaptor_seq, 
-                            num_nt=num_nt, 
-                            min_match_prop=min_match_prop).get('-',[])
-            return {'+':adp_cand} if len(adp_cand) else {}
+                            num_nt=num_nt).get('-',[])
+            return {'+':adpt_ends} if len(adpt_ends) else {}
                 
         else:
             T_strand = self.find_adaptor(
                 strand='-', adaptor_seq=adaptor_seq, 
-                num_nt=num_nt, min_match_prop=min_match_prop)
+                num_nt=num_nt)
             A_strand = self.find_adaptor(
                 strand='+', adaptor_seq=adaptor_seq, 
-                num_nt=num_nt, min_match_prop=min_match_prop)
+                num_nt=num_nt)
             rst = {**{k:v for k,v in T_strand.items() if len(v)},
                    **{k:v for k,v in A_strand.items() if len(v)}}
             return rst
@@ -175,6 +168,7 @@ class Read(object):
         '''
         self._get_strand_and_raw_bc_flag = True
         adapt_dict=self.find_adaptor()
+
         self.adaptor_polyT_pass = 0
         num_of_strand_find = len(adapt_dict)
         num_of_adptor_find = 0
@@ -184,8 +178,8 @@ class Read(object):
             self.adaptor_polyT_pass += 1
         elif num_of_strand_find == 1:
             # check single location 
-            adptor_align = list(adapt_dict.values())[0]
-            num_of_adptor_find = len(set([a.end for a in adptor_align]))
+            adptors = set(list(adapt_dict.values())[0])
+            num_of_adptor_find = len(adptors)
             if num_of_adptor_find == 0:
                 raise ValueError(
                     "Bug found: strand found but num_of_adptor_find==0.")
@@ -213,8 +207,7 @@ class Read(object):
                 raise AssertionError(
                     'Bug found: read passed but raw bc location is still ambiguous')
 
-
-            self.raw_bc_start = list(adapt_dict.values())[0][0].end
+            self.raw_bc_start = list(adapt_dict.values())[0][0]
             self.strand = list(adapt_dict.keys())[0]
             
             if self.strand == '+':
@@ -231,6 +224,7 @@ class Read(object):
                     phred_score = self.phred_score
 
                 bc_phred_score = phred_score[self.raw_bc_start: self.raw_bc_start+16]      
+
                 self.raw_bc_min_q = min([ord(x) for x in bc_phred_score]) - 33
 
             else:

@@ -5,7 +5,7 @@ with open('README.md', 'r') as f:
 
 setup(
     name='blaze2',
-    version='2.0.0a4',
+    version='2.0.0a5',
     author='Yupei You',
     author_email="youyupei@gmail.com",
     description='Barcode identification from Long reads for AnalyZing single cell gene Expression',
@@ -17,8 +17,7 @@ setup(
     install_requires=["fast-edit-distance==1.2.1", 
                     'matplotlib', 
                     'tqdm', 'numpy', 
-                    'pandas', 
-                    'biopython==1.79'],
+                    'pandas'],
     classifiers=[
          "Programming Language :: Python :: 3",
          "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",

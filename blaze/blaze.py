@@ -16,7 +16,6 @@ import sys
 import shlex
 import os
 import getopt
-import Bio.SeqIO
 from collections import defaultdict, Counter
 from tqdm import tqdm
 import multiprocessing as mp
@@ -578,6 +577,23 @@ def main(argv=None):
                  printit = False))
         logger.info(f'Getting putative barcodes from {len(fastq_fns)} FASTQ files...')
         read_batchs = read_batch_generator(fastq_fns, batch_size=batch_size)
+        
+        # # temp---------------------------------------------
+        # import cProfile
+        #     # Create a cProfile object
+        # profiler = cProfile.Profile()
+
+        # # Start profiling
+        # profiler.enable()
+        # get_raw_bc_from_reads(next(read_batchs), min_q=min_phred_score)
+        # # Stop profiling
+        # profiler.disable()
+        # profiler.dump_stats('profiling_results.cprof')
+        # profiler.print_stats(sort='cumulative')
+
+        # exit()
+        # # ---------------------------------------------------------------------------
+
         rst_futures = helper.multiprocessing_submit(get_raw_bc_from_reads,
                                                 read_batchs, n_process=n_process, 
                                                 min_q=min_phred_score)

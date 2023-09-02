@@ -24,6 +24,8 @@ def reverse_complement(seq):
 		[comp[base] if base in comp.keys() else base for base in seq]
 	return ''.join(letters)[::-1]
 
+
+
 def err_msg(msg):
 	CRED = '\033[91m'
 	CEND = '\033[0m'
@@ -148,7 +150,7 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
         # will wait until as least one job finished
         # batch size as value, release the cpu as soon as one job finished
         job = next(as_completed(futures), None)
-        n_job_in_queue -= 1
+        
         # no more job  
         if job is not None:
             job_completed[futures[job][1]] = job, futures[job][0]
@@ -160,6 +162,7 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
                 if pbar:
                     _pbar.update(job_completed[job_to_yield][1])
                 yield job_completed[job_to_yield][0]
+                n_job_in_queue -= 1
                 del job_completed[job_to_yield]
                 job_to_yield += 1
         # all jobs finished: yield complelted job in the submit order

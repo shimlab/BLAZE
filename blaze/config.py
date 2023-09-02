@@ -2,7 +2,6 @@
 
 import os
 import numpy as np
-import pkg_resources
 
 ## Output prefix
 DEFAULT_PREFIX = ''
@@ -13,7 +12,7 @@ DEFAULT_PREFIX = ''
 ## adaptor finding
 ADPT_SEQ='CTTCCGATCT' #searched adaptor sequence
 ADPT_WIN=200 #search adaptor in subsequence from both end of the reads with this size
-ADPT_MIN_MATCH_PROP=0.8 #minimum proportion of match required when searching
+ADPT_MAC_MATCH_ED=2 #minimum proportion of match required when searching
 
 ## poly T searching
 PLY_T_LEN=4 #length of searched poly T
