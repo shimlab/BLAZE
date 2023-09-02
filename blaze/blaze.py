@@ -107,6 +107,9 @@ def parse_arg(argv):
                     the specified number larger than the number of reads in each fastq files, the 
                     batch size will be forced to be the number of reads in the file. <Default: 1000>
 
+                --minimal_stdout
+                    Minimise the command-line printing
+
             High sensitivity mode:
                 --high-sensitivity-mode:
                     Turn on the sensitivity mode, which increases the sensitivity of barcode
@@ -144,6 +147,7 @@ def parse_arg(argv):
     emptydrop_max_count = np.inf
     do_demultiplexing = True
     max_edit_distance = DEFAULT_ASSIGNMENT_ED
+    minimal_out = False
 
     # Read from options
     try: 
@@ -151,7 +155,7 @@ def parse_arg(argv):
                     ["help","threads=","minQ=","full-bc-whitelist=","high-sensitivity-mode",
                      "output-prefix=", "expect-cells=", "overwrite",
                      "kit-version=", "batch-size=", "emptydrop-max-count=", "output-fastq=",
-                     "no-demultiplexing", "max-edit-distance="])
+                     "no-demultiplexing", "max-edit-distance=", "minimal_stdout"])
     except getopt.GetoptError:
         helper.err_msg("Error: Invalid argument input") 
         print_help()
@@ -190,12 +194,16 @@ def parse_arg(argv):
             do_demultiplexing = False
         elif opt == "--max-edit-distance":
             max_edit_distance = int(arg)
+        elif opt == '--minimal_stdout':
+            minimal_out = True
     # output filename:
     out_fastq_fn = prefix + out_fastq_fn
     out_raw_bc_fn = prefix + DEFAULT_GRB_OUT_RAW_BC
     out_whitelist_fn = prefix + DEFAULT_GRB_OUT_WHITELIST
     out_emptydrop_fn = prefix + DEFAULT_EMPTY_DROP_FN
     out_plot_fn = prefix + DEFAULT_KNEE_PLOT_FN
+    summary_fn = prefix + DEFAULT_BC_STAT_FN
+
     if kit not in ['v2', 'v3']:
         helper.err_msg("Error: Invalid value of --kit-version, please choose from v3 or v2") 
         sys.exit()
@@ -274,7 +282,8 @@ def parse_arg(argv):
     return fastq_fns, out_fastq_fn, n_process, exp_cells ,min_phred_score, \
             full_bc_whitelist, out_raw_bc_fn, out_whitelist_fn, \
             high_sensitivity_mode, batch_size, out_emptydrop_fn, emptydrop_max_count, \
-            overwrite, out_plot_fn, do_demultiplexing, max_edit_distance
+            overwrite, out_plot_fn, do_demultiplexing, max_edit_distance, summary_fn,\
+            minimal_out
 
 # Parse fastq -> polyT_adaptor_finder.Read class
 def get_raw_bc_from_reads(reads, min_q=0):
@@ -343,7 +352,7 @@ def get_raw_bc_from_reads(reads, min_q=0):
         )
     return Counter(raw_bc), Counter(raw_bc_pass), rst_df
 
-def qc_report(pass_count, min_phred_score):
+def qc_report(pass_count, min_phred_score, stdout=True, out_fn=None):
     '''
     Generate report for the putative barcode detection.
     Print stats for 
@@ -360,8 +369,10 @@ def qc_report(pass_count, min_phred_score):
     '''
     total_read = sum(pass_count.values())
     
-    print_message=\
+    print_message=textwrap.dedent(
         f'''
+        \n----------------------stats of the putative barcodes--------------------------
+
         Total number of reads: 
             {total_read:,}
         Reads with unambiguous polyT and adapter positions found:            
@@ -374,9 +385,14 @@ def qc_report(pass_count, min_phred_score):
                 {pass_count[2]:,} ({pass_count[2]/total_read*100:.2f}% of all reads)
             multiple polyT and adapter found in one end
                 {pass_count[10]:,} ({pass_count[10]/total_read*100:.2f}% of all reads)
-        '''
-    print(textwrap.dedent(print_message))
-    
+        -------------------------------------------------------------------------------\n'
+        ''')
+    if stdout:
+        print(print_message)
+    if out_fn:
+        with open(out_fn, 'w') as f:
+            f.write(print_message + '\n')
+
     
 def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None, 
                     count_t=None, high_sensitivity_mode=False, 
@@ -541,15 +557,17 @@ def main(argv=None):
     
     fastq_fns, out_fastq_fn, n_process, exp_cells ,min_phred_score, \
         full_bc_whitelist, out_raw_bc_fn, out_whitelist_fn, \
-        high_sensitivity_mode, batch_size, out_emptydrop_fn, emptydrop_max_count, \
-        overwrite, out_plot_fn, do_demultiplexing, max_edit_distance = parse_arg(argv)
+        high_sensitivity_mode, batch_size, out_emptydrop_fn, \
+        emptydrop_max_count, overwrite, out_plot_fn, do_demultiplexing, \
+        max_edit_distance, summary_fn,minimal_out  = parse_arg(argv)
     
+    # Start running: Welcome logo
+    if not minimal_out:
+        print(textwrap.dedent(
+            f'''\n\nWelcome to 
+                {BLAZE_LOGO}
+        '''))
 
-    print(textwrap.dedent(
-    f'''\n\nWelcome to 
-        {BLAZE_LOGO}
-    '''
-    ))
     ######################
     ###### Getting putative barcodes
     ######################
@@ -579,10 +597,10 @@ def main(argv=None):
         
         helper.green_msg(f'Putative barcode table saved in {out_raw_bc_fn}')
         
-        # output
-        print('\n----------------------stats of the putative barcodes--------------------------')
-        qc_report(raw_bc_pass_count, min_phred_score = min_phred_score)
-        print('-----------------------------------------------------\n')
+        # ----------------------stats of the putative barcodes--------------------------
+        qc_report(raw_bc_pass_count, min_phred_score=min_phred_score, 
+                  out_fn=summary_fn, stdout= not minimal_out)
+
     
     else:
         logger.info(helper.warning_msg(textwrap.dedent(
