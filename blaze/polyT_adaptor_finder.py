@@ -127,7 +127,7 @@ class Read(object):
         
         # take reverse complement if read is coming from transcript strand (with ployA instead ployT)
         if strand == '+':
-            read = helper.reverse_complement(read[-1:-num_nt-1:-1])
+            read = helper.reverse_complement(read[-num_nt:])
             adpt_ends = self.find_adaptor(
                             read, strand='-', adaptor_seq=adaptor_seq, 
                             num_nt=num_nt).get('-',[])
