@@ -293,7 +293,7 @@ def get_raw_bc_from_reads(reads, min_q=0):
     Parameters
     ----------
     reads : LIST
-        list of reads entry in Bio.SeqIO.parse
+        list of reads named tuple with names: id, seq, q_letter
     min_q: INT
         Only count putative bc with minimum value specified
     save_putative_bc: STR

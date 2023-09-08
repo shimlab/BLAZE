@@ -60,8 +60,7 @@ class Read(object):
             max edit distance in the adaptor alignment. Default: 2
         Returns
         -------
-        Bio.pairwise2.Alignment
-        *(adaptor_start, adaptor_end): adaptor start and end position (0-based) in reads
+        Dict
         '''
         # check input
         strand = self._strand if not strand else strand
