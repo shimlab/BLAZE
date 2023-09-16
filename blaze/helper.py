@@ -179,7 +179,7 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
 def procee_batch(df,  row_func, *arg, **kwargs):
         return df.apply(row_func, axis=1, *arg, **kwargs)
 
-def df_multiproceccing_apply(df, func, npartitions, aggr_func=pd.concat, pbar = True, pbar_unit='Read',pbar_func=len,*arg, **kwargs):
+def df_multiproceccing_apply(df, func, npartitions, n_process, aggr_func=pd.concat, pbar = True, pbar_unit='Read',pbar_func=len,*arg, **kwargs):
     """This is a re-implementation which is very similar to dask apply. 
     """
     def sub_df_generator(df, n_part = npartitions):
@@ -188,17 +188,22 @@ def df_multiproceccing_apply(df, func, npartitions, aggr_func=pd.concat, pbar = 
         """
         sub_size = int(np.ceil(len(df) / n_part))
         for i in range(n_part):
-            yield df.iloc[i*sub_size:i*sub_size+sub_size,]
+            yield df.iloc[i*sub_size:i*sub_size+sub_size,].copy()
 
 
             
     df_iter = sub_df_generator(df)
-    rst_futures = multiprocessing_submit(procee_batch, df_iter, n_process=mp.cpu_count()-1 ,
+    rst_futures = multiprocessing_submit(procee_batch, df_iter, n_process=n_process,
                            pbar = pbar, pbar_unit=pbar_unit,pbar_func=pbar_func, 
                            schduler = 'process', row_func = func, *arg, **kwargs)
 
-    rsts = [x.result() for x in rst_futures]
-    return aggr_func(rsts)
+    
+    if aggr_func == None:
+        for  x in rst_futures:
+            yield x.result()
+    else:
+        rsts = [x.result() for x in rst_futures]
+        return aggr_func(rsts)
     
 
 # concatenate multiple files

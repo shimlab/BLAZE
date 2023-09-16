@@ -217,10 +217,13 @@ def assign_barcodes(putative_bc_csv, whitelsit_csv, n_process, max_ed):
     df[['BC_corrected','putative_umi', 'strand']] =\
         helper.df_multiproceccing_apply(df, 
                                         match_bc_row,
-                                        npartitions = n_process,
+                                        npartitions = n_process*100,
+                                        n_process = n_process,
                                         max_ed = max_ed,
                                         whitelist=whitelist
                                         )
+
+    
 
     logger.info(helper.green_msg(f"Demultiplexing finshied: ", printit = False))
     logger.info(helper.green_msg(f"Successfully demultiplexed reads / Total reads: {sum(df.BC_corrected!='')} / {len(df.BC_corrected)}. ", printit = False))
@@ -270,6 +273,7 @@ def main_multi_thread(fastq_fns, fastq_out, putative_bc_csv,
                         read_idx += batch_len
     
     assignment_df = assign_barcodes(putative_bc_csv, whitelsit_csv, n_process, max_ed)
+    
     r_batches_with_idx = \
         read_batch_generator_with_idx(fastq_fns, batchsize)
 
@@ -290,44 +294,6 @@ def main_multi_thread(fastq_fns, fastq_out, putative_bc_csv,
     logger.info(f"Concatenating tmp fastq files to {fastq_out}")
     helper.concatenate_files(fastq_out, *tmp_files)
     logger.info(helper.green_msg(f"Demultiplexed read saved in {fastq_out}!", printit = False))
-
-
-# def main_single_thread_wrt(fastq_fns, fastq_out, putative_bc_csv, whitelsit_csv, n_process, gz, batchsize):
-#     # check file exist. Avoid overwrite
-#     i = 1
-#     while os.path.exists(fastq_out):
-#         fastq_out = f'{fastq_out.split("_")[0]}_{i}'
-#         i+=1
-
-#     output_handle = gzip.open(fastq_out, 'wt') if gz else open(fastq_out, 'w')
-#     assignment_df = assign_barcodes(putative_bc_csv, whitelsit_csv, n_process)
-
-
-#     r_batches = blaze.read_batch_generator(fastq_fns, batchsize)
-    
-#     read_idx = 0
-#     for read_batch in tqdm(r_batches):
-#         records = []
-#         for r in read_batch:
-#             row = assignment_df.iloc[read_idx]#the row in putative bc table
-#             read_idx += 1 
-            
-#             try:
-#                 assert row.read_id == r.id
-#             except AssertionError:
-#                 helper.err_msg("Different order in putative bc file and input fastq!")
-
-#             if not row.putative_bc:
-#                 continue
-#             r = fastq_modify_header(r, row.BC_corrected, row.putative_umi)
-
-#             if row.umi_end < 0:
-#                 r = fastq_trim_seq(r,end = int(row.umi_end))
-#             else:
-#                 r = fastq_trim_seq(r,start = int(row.umi_end))
-#             records.append(r)
-#         SeqIO.write(records, output_handle, "fastq")
-#     output_handle.close()
 
 if __name__ == '__main__':
     #main_multi_thread()
