@@ -53,6 +53,12 @@ def match_bc(bc, whitelist, max_ed):
                     return ''
     return bc_hit
 
+def test_match_bc_row(row, whitelist, max_ed):
+    rst = match_bc_row(row, whitelist, max_ed)
+    if len(rst) != 3:
+        print(len(rst))
+    return rst
+
 def match_bc_row(row, whitelist, max_ed):
     """
     Args:
@@ -214,16 +220,16 @@ def assign_barcodes(putative_bc_csv, whitelsit_csv, n_process, max_ed):
             whitelist.append(line.split('-')[0])
     whitelist = set(whitelist)
     
-    df[['BC_corrected','putative_umi', 'strand']] =\
-        helper.df_multiproceccing_apply(df, 
+    new_cols = pd.DataFrame(columns = ['BC_corrected','putative_umi', 'strand'])
+    new_cols = helper.df_multiproceccing_apply(df, 
                                         match_bc_row,
-                                        npartitions = n_process*100,
                                         n_process = n_process,
                                         max_ed = max_ed,
                                         whitelist=whitelist
                                         )
+    # print the dimention of df and new_df
+    df[['BC_corrected','putative_umi', 'strand']] = new_cols
 
-    
 
     logger.info(helper.green_msg(f"Demultiplexing finshied: ", printit = False))
     logger.info(helper.green_msg(f"Successfully demultiplexed reads / Total reads: {sum(df.BC_corrected!='')} / {len(df.BC_corrected)}. ", printit = False))
@@ -273,7 +279,6 @@ def main_multi_thread(fastq_fns, fastq_out, putative_bc_csv,
                         read_idx += batch_len
     
     assignment_df = assign_barcodes(putative_bc_csv, whitelsit_csv, n_process, max_ed)
-    
     r_batches_with_idx = \
         read_batch_generator_with_idx(fastq_fns, batchsize)
 
