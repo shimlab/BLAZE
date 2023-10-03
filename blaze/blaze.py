@@ -573,7 +573,7 @@ def main(argv=None):
     if not os.path.exists(out_raw_bc_fn) or overwrite:
         if os.path.exists(out_raw_bc_fn) and overwrite:
             logger.info(helper.warning_msg(
-                f"The output putative barcodes table `{out_raw_bc_fn}` exist. It will be overwritten...",
+                f"NOTE: The output putative barcodes table `{out_raw_bc_fn}` exist. It will be overwritten...",
                  printit = False))
         logger.info(f'Getting putative barcodes from {len(fastq_fns)} FASTQ files...')
         read_batchs = read_batch_generator(fastq_fns, batch_size=batch_size)
@@ -651,13 +651,13 @@ def main(argv=None):
 
         if overwrite:
             logger.info(helper.warning_msg(
-                f"Warning: `{out_whitelist_fn}` and `{out_emptydrop_fn}` will be overwritten if exist...",
+                f"NOTE: `{out_whitelist_fn}` and `{out_emptydrop_fn}` will be overwritten if exist...",
                 printit = False
             ))
 
         elif os.path.exists(out_emptydrop_fn):
             logger.info(helper.warning_msg(
-                f"Warning: `{out_whitelist_fn}` doesn't exist, `{out_emptydrop_fn}` and `{out_plot_fn}` will be overwritten if exist...",
+                f"NOTE: `{out_whitelist_fn}` doesn't exist, `{out_emptydrop_fn}` and `{out_plot_fn}` will be overwritten if exist...",
                 printit = False
             ))
 
@@ -688,16 +688,16 @@ def main(argv=None):
 
     elif os.path.exists(out_whitelist_fn) and not overwrite:
         logger.info(helper.warning_msg(
-                f"Warning: `{out_whitelist_fn}` exist, the whitelisting step will be skipped."
+                f"NOTE: `{out_whitelist_fn}` exist, the whitelisting step will be skipped."
                 , printit = False))
         if not os.path.exists(out_emptydrop_fn):
             logger.info(helper.warning_msg(
-                f"Warning: BLAZE will use existing `{out_whitelist_fn}` for the downstread steps and will not re-generate the {out_emptydrop_fn}."
+                f"NOTE: BLAZE will use existing `{out_whitelist_fn}` for the downstread steps and will not re-generate the {out_emptydrop_fn}."
                 f"If the file is required, please remove/rename the existing `{out_whitelist_fn}` and rerun."
             , printit = False))
         if not os.path.exists(out_plot_fn):
             logger.info(helper.warning_msg(
-                f"Warning: BLAZE will use existing `{out_whitelist_fn}` for the downstread steps and will not re-generate the {out_plot_fn}."
+                f"NOTE: BLAZE will use existing `{out_whitelist_fn}` for the downstread steps and will not re-generate the {out_plot_fn}."
                 f"If the file is required, please remove/rename the existing `{out_whitelist_fn}` and rerun."
             , printit = False))
     
@@ -707,7 +707,7 @@ def main(argv=None):
     if do_demultiplexing and (not os.path.exists(out_fastq_fn) or overwrite):
         if overwrite:
             logger.info(helper.warning_msg(
-                f"Warning:  {out_fastq_fn} will be overwritten if exist...",
+                f"NOTE:  {out_fastq_fn} will be overwritten if exist...",
                 printit = False
             ))
         logger.info("Assigning reads to whitelist.\n")
@@ -722,7 +722,7 @@ def main(argv=None):
     elif os.path.exists(out_fastq_fn) and \
         os.path.getmtime(out_fastq_fn) < os.path.getmtime(out_whitelist_fn):
         logger.info(helper.warning_msg(
-            f"Warning: The `{out_fastq_fn}` exists and has NOT been updated. However,"
+            f"NOTE: The `{out_fastq_fn}` exists and has NOT been updated. However,"
             f"the existing `{out_fastq_fn}` is older than the upstream output {out_whitelist_fn}."
             f"If it needs to be re-generated. Please remove/rename the existing `{out_fastq_fn}` and re-run BLAZE "
         , printit = False))
