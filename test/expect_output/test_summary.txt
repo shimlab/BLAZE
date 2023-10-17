@@ -1,0 +1,19 @@
+
+
+----------------------stats of the putative barcodes--------------------------
+
+        Total number of reads: 
+            112,000
+        Reads with unambiguous polyT and adapter positions found:            
+            96,296 (85.98% of all reads)
+            63,477 in which all bases in the putative BC have Q>=15
+        Failed Reads: 
+            no polyT and adapter positions found: 
+                10,311 (9.21% of all reads)
+            polyT and adapter positions found in both end (fail to determine strand): 
+                4,331 (3.87% of all reads)
+            multiple polyT and adapter found in one end
+                1,062 (0.95% of all reads)
+        -------------------------------------------------------------------------------
+'
+
