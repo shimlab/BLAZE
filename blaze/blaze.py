@@ -76,14 +76,18 @@ def parse_arg(argv):
 
                 --no-demultiplexing:
                     Only output the whitelist and do not perform the demultiplexing step.
+
+                --skip-whitelisting:
+                    Skip the whitelisting step and assign reads to full whitelist specified by --full-bc-whitelist.
                 
                 --max-edit-distance <INT>
                     Maximum edit distance allowed between a putative barcode and a barcode 
                     for a read/putative barcdoe to be assigned to the barcode. Default: --max-edit-distance {DEFAULT_ASSIGNMENT_ED}
                 
                 --kit-version <v2 or v3>:
-                    Choose from 10X Single Cell 3ʹ gene expression v2 or v3. 
-                    Default: --kit_version v3.
+                    Choose from 10X Single Cell 3ʹ gene expression v2 or v3. If using other protocols,
+                    please do not specify this option and specify --full-bc-whitelist instead. By default, 
+                    `--kit_version v3`  will be used if --full-bc-whitelist is not specified.
 
                 --minQ <INT>:
                     Putative BC contains one or more bases with Q<minQ is not counted 
@@ -145,6 +149,7 @@ def parse_arg(argv):
     high_sensitivity_mode = False   
     emptydrop_max_count = np.inf
     do_demultiplexing = True
+    do_whitelisting = True
     max_edit_distance = DEFAULT_ASSIGNMENT_ED
     minimal_out = False
 
@@ -154,7 +159,8 @@ def parse_arg(argv):
                     ["help","threads=","minQ=","full-bc-whitelist=","high-sensitivity-mode",
                      "output-prefix=", "expect-cells=", "overwrite",
                      "kit-version=", "batch-size=", "emptydrop-max-count=", "output-fastq=",
-                     "no-demultiplexing", "max-edit-distance=", "minimal_stdout"])
+                     "no-demultiplexing", "max-edit-distance=", "minimal_stdout",
+                     "no-whitelisting="])
     except getopt.GetoptError:
         helper.err_msg("Error: Invalid argument input") 
         print_help()
@@ -184,7 +190,6 @@ def parse_arg(argv):
             kit = arg.lower()
         elif opt == "--high-sensitivity-mode":
             high_sensitivity_mode = True
-            #emptydrop = True
         elif opt == "--batch-size":
             batch_size = int(arg)
         elif opt == "--emptydrop-max-count":
@@ -195,6 +200,8 @@ def parse_arg(argv):
             max_edit_distance = int(arg)
         elif opt == '--minimal_stdout':
             minimal_out = True
+        elif opt == '--no-whitelisting':
+            do_whitelisting = False
     # output filename:
     out_fastq_fn = prefix + out_fastq_fn
     out_raw_bc_fn = prefix + DEFAULT_GRB_OUT_RAW_BC
@@ -282,7 +289,7 @@ def parse_arg(argv):
             full_bc_whitelist, out_raw_bc_fn, out_whitelist_fn, \
             high_sensitivity_mode, batch_size, out_emptydrop_fn, emptydrop_max_count, \
             overwrite, out_plot_fn, do_demultiplexing, max_edit_distance, summary_fn,\
-            minimal_out
+            minimal_out, do_whitelisting
 
 # Parse fastq -> polyT_adaptor_finder.Read class
 def get_raw_bc_from_reads(reads, min_q=0):
@@ -558,7 +565,7 @@ def main(argv=None):
         full_bc_whitelist, out_raw_bc_fn, out_whitelist_fn, \
         high_sensitivity_mode, batch_size, out_emptydrop_fn, \
         emptydrop_max_count, overwrite, out_plot_fn, do_demultiplexing, \
-        max_edit_distance, summary_fn,minimal_out  = parse_arg(argv)
+        max_edit_distance, summary_fn,minimal_out, do_whitelisting = parse_arg(argv)
     
     # Start running: Welcome logo
     if not minimal_out:
@@ -645,7 +652,7 @@ def main(argv=None):
     ######################
     ###### Whitelisting
     ######################
-    if not os.path.exists(out_whitelist_fn) or overwrite:
+    if do_whitelisting and (not os.path.exists(out_whitelist_fn) or overwrite):
         if overwrite or not os.path.exists(out_emptydrop_fn):
             logger.info("Getting barcode whitelist and empty droplet barcode list...\n")
 
@@ -701,6 +708,10 @@ def main(argv=None):
                 f"If the file is required, please remove/rename the existing `{out_whitelist_fn}` and rerun."
             , printit = False))
     
+    elif not do_whitelisting:
+        logger.info(helper.warning_msg(
+                f"NOTE: Whitelisting step is skipped as specified by --no-whitelisting. BLAZE will assign reads to {full_bc_whitelist}."
+            , printit = False))
     ######################
     ###### Demultiplexing
     ######################
