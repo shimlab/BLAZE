@@ -1,7 +1,11 @@
 <img src="logo.png" width="300"/>
 
 # BLAZE (Barcode identification from Long reads for AnalyZing single cell gene Expression)
-[![Github All Releases](https://img.shields.io/github/downloads/shimlab/BLAZE/total.svg)](https://github.com/shimlab/BLAZE/releases/download/v1.1.0/BLAZE_v1.1.0.zip)
+[![](https://img.shields.io/pypi/v/blaze2)](https://pypi.org/project/blaze2/)
+![Github All Releases](https://img.shields.io/github/downloads/shimlab/BLAZE/total?label=Github%20download)
+![PyPI - License](https://img.shields.io/pypi/l/blaze2)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/blaze2?label=PyPI%20Downloads)
+
 
 **Important Notes:** This repo is actively being updated. Please make sure you have the latest release.
 
@@ -90,11 +94,11 @@ By default, BLAZE is configured to minimise false-positive barcode detections an
 
 Run BLAZE in default mode: the expected number of cells are set to be 1000 and run with 12 threads
 ```
-python3 blaze.py --expect-cells=1000 --threads=12 path/to/fastq_pass
+blaze --expect-cells=1000 --threads=12 path/to/fastq_pass
 ```
 Run BLAZE in high-sensitivity mode: the expected number of cells are set to be 1000 and run with 12 threads
 ```
-python3 blaze.py --high-sensitivity-mode --expect-cells=1000 --threads=12 path/to/fastq_pass
+blaze --high-sensitivity-mode --expect-cells=1000 --threads=12 path/to/fastq_pass
 ```
 
 ## Rerun blaze or update previous run(s)
