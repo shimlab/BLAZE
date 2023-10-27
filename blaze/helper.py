@@ -187,8 +187,12 @@ def df_multiproceccing_apply(df, func, n_process, aggr_func=pd.concat, pbar = Tr
         Generator: split a large df by row into multiple 
         """
         sub_size = int(np.ceil(len(df) / n_part))
-        for i in range(n_part):
-            yield df.iloc[i*sub_size:i*sub_size+sub_size,].copy()
+        print(len(df), n_part, sub_size)
+        batch_start, batch_end = 0, sub_size
+        while batch_start < len(df):
+            yield df.iloc[batch_start:batch_end,].copy()
+            batch_start += sub_size
+            batch_end += sub_size
 
     #run 100 batch per process on average but ensure at least 1000 reads per batch
     num_batch = min(int(len(df)/1000)+1, n_process*100) 
