@@ -4,7 +4,7 @@
 ![PyPI - Version](https://img.shields.io/pypi/v/blaze2?label=Version)
 ![Github All Releases](https://img.shields.io/github/downloads/shimlab/BLAZE/total?label=Github%20Downloads)
 ![PyPI - License](https://img.shields.io/pypi/l/blaze2)
-![Pepy Total Downlods](https://img.shields.io/pepy/dt/blaze2?label=Pypi%20Downloads)
+[![Downloads](https://static.pepy.tech/badge/BLAZE2)](https://pepy.tech/project/BLAZE2)
 
 **Important Notes:** This repo is actively being updated. Please make sure you have the latest release.
 
