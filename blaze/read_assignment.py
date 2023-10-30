@@ -227,7 +227,7 @@ def assign_barcodes(putative_bc_csv, whitelsit_csv, n_process, max_ed):
                                         max_ed = max_ed,
                                         whitelist=whitelist
                                         )
-    # print the dimention of df and new_df
+
     df[['BC_corrected','putative_umi', 'strand']] = new_cols
 
 

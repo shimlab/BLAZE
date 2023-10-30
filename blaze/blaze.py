@@ -58,8 +58,12 @@ def parse_arg(argv):
             Usage: blaze  --expect-cells <INT> [OPTIONS] <fastq directory>
 
             Required argument:
-                --expect-cells <INT> (required)
+                One of the following two options is required unless whitelisting step is turned off:
+                    --expect-cells <INT> 
                             Expected number of cells.
+                    --count-threshold <INT>
+                            Count threshold of high-quality putative barcodes used to determine the whitelist. 
+                Note that the --count-threshold option is ignored if --expect-cells is specified.
 
             Options:
                 -h, --help
@@ -77,7 +81,7 @@ def parse_arg(argv):
                 --no-demultiplexing:
                     Only output the whitelist and do not perform the demultiplexing step.
 
-                --skip-whitelisting:
+                --no-whitelisting:
                     Skip the whitelisting step and assign reads to full whitelist specified by --full-bc-whitelist.
                 
                 --max-edit-distance <INT>
@@ -112,6 +116,8 @@ def parse_arg(argv):
 
                 --minimal_stdout
                     Minimise the command-line printing
+
+
 
             High sensitivity mode:
                 --high-sensitivity-mode:
@@ -152,6 +158,7 @@ def parse_arg(argv):
     do_whitelisting = True
     max_edit_distance = DEFAULT_ASSIGNMENT_ED
     minimal_out = False
+    count_t = None
 
     # Read from options
     try: 
@@ -160,7 +167,7 @@ def parse_arg(argv):
                      "output-prefix=", "expect-cells=", "overwrite",
                      "kit-version=", "batch-size=", "emptydrop-max-count=", "output-fastq=",
                      "no-demultiplexing", "max-edit-distance=", "minimal_stdout",
-                     "no-whitelisting="])
+                     "no-whitelisting", "count-threshold="])
     except getopt.GetoptError:
         helper.err_msg("Error: Invalid argument input") 
         print_help()
@@ -202,6 +209,8 @@ def parse_arg(argv):
             minimal_out = True
         elif opt == '--no-whitelisting':
             do_whitelisting = False
+        elif opt == '--count-threshold':
+            count_t = int(arg)
     # output filename:
     out_fastq_fn = prefix + out_fastq_fn
     out_raw_bc_fn = prefix + DEFAULT_GRB_OUT_RAW_BC
@@ -231,10 +240,13 @@ def parse_arg(argv):
         sys.exit(0)
 
     # check required argument
-    if not exp_cells:
-        helper.err_msg("--expect-cells is required to build the whitelist!") 
+    if not exp_cells and count_t is None and do_whitelisting:
+        helper.err_msg("--expect-cells or --count-threshold is required to build the whitelist!") 
         sys.exit(1)
-    
+    if exp_cells and count_t is not None:
+        helper.warning_msg("--expect-cells and --count-threshold are both specified. --expect-cells will be used.")
+        count_t = None
+
     # check input
     fastq_dir = args[0]
     helper.check_exist([full_bc_whitelist, fastq_dir])
@@ -289,7 +301,7 @@ def parse_arg(argv):
             full_bc_whitelist, out_raw_bc_fn, out_whitelist_fn, \
             high_sensitivity_mode, batch_size, out_emptydrop_fn, emptydrop_max_count, \
             overwrite, out_plot_fn, do_demultiplexing, max_edit_distance, summary_fn,\
-            minimal_out, do_whitelisting
+            minimal_out, do_whitelisting, count_t
 
 # Parse fastq -> polyT_adaptor_finder.Read class
 def get_raw_bc_from_reads(reads, min_q=0):
@@ -466,7 +478,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist, exp_cells=None,
     raw_bc_count = {k:v for k,v in raw_bc_count.items() if k in whole_whitelist}
     
     # determine real bc based on the count threshold
-    if count_t:
+    if count_t is not None:
         knee_plot(list(raw_bc_count.values()), count_t, out_plot_fn)
         cells_bc = {k:v for k,v in raw_bc_count.items() if v > count_t}
 
@@ -565,7 +577,8 @@ def main(argv=None):
         full_bc_whitelist, out_raw_bc_fn, out_whitelist_fn, \
         high_sensitivity_mode, batch_size, out_emptydrop_fn, \
         emptydrop_max_count, overwrite, out_plot_fn, do_demultiplexing, \
-        max_edit_distance, summary_fn,minimal_out, do_whitelisting = parse_arg(argv)
+        max_edit_distance, summary_fn,minimal_out, do_whitelisting, \
+        count_t = parse_arg(argv)
     
     # Start running: Welcome logo
     if not minimal_out:
@@ -639,20 +652,22 @@ def main(argv=None):
             """
         ), printit = False))
             # read table
-        dfs = pd.read_csv(out_raw_bc_fn, chunksize=1_000_000)
-        
-        # get bc count dict (filtered by minQ)
-        
-        raw_bc_count = Counter()
-        for df in tqdm(dfs, desc = 'Counting high-quality putative BC'):
-            raw_bc_count += Counter(df[
-                df.putative_bc_min_q >=min_phred_score].putative_bc.value_counts().to_dict())
+
             
         
     ######################
     ###### Whitelisting
     ######################
     if do_whitelisting and (not os.path.exists(out_whitelist_fn) or overwrite):
+
+        dfs = pd.read_csv(out_raw_bc_fn, chunksize=1_000_000)
+        
+        # get bc count dict (filtered by minQ)
+        raw_bc_count = Counter()
+        for df in tqdm(dfs, desc = 'Counting high-quality putative BC'):
+            raw_bc_count += Counter(df[
+                df.putative_bc_min_q >=min_phred_score].putative_bc.value_counts().to_dict())
+
         if overwrite or not os.path.exists(out_emptydrop_fn):
             logger.info("Getting barcode whitelist and empty droplet barcode list...\n")
 
@@ -672,6 +687,7 @@ def main(argv=None):
             bc_whitelist, ept_bc = get_bc_whitelist(raw_bc_count,
                                     full_bc_whitelist, 
                                     exp_cells=exp_cells,
+                                    count_t=count_t,
                                     high_sensitivity_mode=high_sensitivity_mode,
                                     output_empty=True,
                                     empty_max_count=emptydrop_max_count,
@@ -712,6 +728,7 @@ def main(argv=None):
         logger.info(helper.warning_msg(
                 f"NOTE: Whitelisting step is skipped as specified by --no-whitelisting. BLAZE will assign reads to {full_bc_whitelist}."
             , printit = False))
+        out_whitelist_fn =full_bc_whitelist
     ######################
     ###### Demultiplexing
     ######################
