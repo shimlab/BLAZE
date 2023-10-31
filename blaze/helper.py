@@ -157,7 +157,7 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
             del futures[job]
             #print(job_completed.keys())
             # check order
-            if  job_to_yield in job_completed.keys():
+            while job_to_yield in job_completed.keys():
                 # update pregress bar based on batch size
                 if pbar:
                     _pbar.update(job_completed[job_to_yield][1])
