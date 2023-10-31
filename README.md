@@ -16,7 +16,7 @@ Combining single-cell RNA sequencing with Nanopore long-read sequencing enables 
 
 # Version 2.x Update vs. Version 1.x
 * Significant runtime improvement
-* Add more information into the putative barcode table:
+* Add more information to the putative barcode table:
     * putative UMI
     * UMI end position (used for later trimming the adaptor-UMI sequence from each read)
     * Flanking bases before barcode and after UMI (for correction of insertion and deletion within the putative barcode and UMIs)
@@ -28,7 +28,6 @@ Combining single-cell RNA sequencing with Nanopore long-read sequencing enables 
 `pip3 install blaze2`
 
 ## <a name="dependencies"></a>Dependencies
-* `Biopython`
 * `pandas`
 * `numpy`
 * `tqdm`
@@ -54,15 +53,13 @@ The details of the pipeline and output can be found [here](#Understanding-the-BL
 BLAZE performs the following steps:
 
 **Step 1: Locate the putative barcode and UMI sequence in each read:**
-
-BLAZE first searches for putative barcodes (i.e. non-error corrected sequence at the expected barcode position) by locating the 10X adapter and polyT in each read. Both the sequenced strand and reverse complement strand are considered for each read. These putative barcodes and their quality scores (minQ) are recorded in `putative_bc.csv`. The IDs of reads where no putative barcode can be located are also listed in the file but without any putative barcode or minQ score.
+BLAZE first searches for putative barcodes (i.e. non-error corrected sequence at the expected barcode position) by locating the 10X adapter and polyT in each read. Both the sequenced strand and reverse complement strand are considered for each read. These putative barcodes and their quality scores (minQ) are recorded in `putative_bc.csv`. The IDs of reads where no putative barcode can be located are also listed in the file but without any putative barcode or minQ score. Note that the putative barcodes and UMIs identified at this step were NOT error-corrected. BLAZE will perform error correction at step 3.
 * Output 1. Putative barcode and UMI sequence in each read, default filename: `putative_bc.csv`. It contains 7 columns:
-        
     * col1: read id
     * col2: putative barcode (i.e. the basecalled barcode segment in each read, specifically the 16nt sequence after the identified 10X adaptor within each read **without correction for any basecalling errors**)
     * col3: minimum Phred score of the bases in the putative barcode
-    * col4: putative_umi
-    * col5: 0-based UMI end position in each read, a positive value indicates that the barcode and UMI were found at forward strand of the read, and a negative value indicates the barcode and UMI were extracted (including the flanking sequencing in col 6 & 7) from the reverse strand.
+    * col4: putative_umi (i.e. the UMI segment in each read, specifically the 10 (for 10x v2 kit) or 12nt (for 10x v3 kit) sequence after the identified putative barcode **without correction for any basecalling errors**)
+    * col5: 0-based UMI end position in each read, a positive value indicates that the barcode and UMI were found at the forward strand of the read, and a negative value indicates the barcode and UMI were extracted (including the flanking sequencing in col 6 & 7) from the reverse strand.
     * col6: flanking sequence immediately upstream to the barcode in the reads
     * col7: flanking sequence immediately downstream to the UMI in the reads
 
@@ -77,7 +74,7 @@ Finally, BLAZE generates a cell-associated barcode list by picking unique barcod
 * Output 4: list of barcodes associated with empty droplets, default filename: `emtpy_bc.csv`.
 
 **Step 3: Assign reads to the barcodes.**
-With the barcode list generated in step 2, BLAZE assigns reads to cells by comparing the putative barcodes with the barcode list and finding the closest match. Specifically, for each read, the putative barcode has been identified in step 1. Among the barcode list, BLAZE identifies the barcode with the lowest ED from the read. Note that the reads would not be assigned if 1. the lowest ED is larger than a threshold (Default: 2). 2. Multiple barcodes in the list have an equal lowest ED.
+With the barcode list generated in step 2, BLAZE assigns reads to cells by comparing the putative barcodes with the barcode list and finding the closest match. Specifically, for each read, the putative barcode has been identified in step 1. Among the barcode list, BLAZE identifies the barcode with the lowest ED from the read. Note that the reads would not be assigned if 1. the lowest ED is larger than a threshold (Default: 2). 2. Multiple barcodes in the list have an equal lowest ED. If a read barcode is successfully assigned to a barcode, the UMI sequence will be also adjusted for the INDEL error in the putative barcode. 
 
 * Output 5: fastq files with modified read name: @\<barcode>\_\<UMI>\_\<original read id>_<strand ('+' or '-')>. For strand, '+' means the barcode identified from the forward strand of the read and '-' means the reverse strand. 
 
