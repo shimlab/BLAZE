@@ -15,14 +15,17 @@ Oxford Nanopore sequencing, Demultiplexing, Single Cell, Barcode.
 Combining single-cell RNA sequencing with Nanopore long-read sequencing enables isoform-level analysis in single cells. However, due to the higher error rate in Nanopore reads, the demultiplexing of cell barcodes and Unique molecular Identifiers (UMIs) can be challenging. This tool enables the accurate identification of barcodes and UMIs solely from Nanopore reads. The output of BLAZE is a barcode whitelist and a fastq of demultiplexed reads with barcodes and UMIs identified,  which can be utilised by downstream tools such as FLAMES to quantify genes and isoforms in single cells. For a detailed description of how BLAZE works and its performance across different datasets, please see our [Genome Biology paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-023-02907-y).
 
 # Version 2.x Update vs. Version 1.x
-* Significant runtime improvement
+## Major updates
+* **Add a final step to perform the read-to-whitelist assignment:** A putative barcode (16nt) will first be extended to include flanking bases from both sides. Then we scan through the whitelist and find the one with the lowest subsequence edit distance (ED: defined as the minimum edits required to make a shorter sequence a subsequence of the longer one). The UMI position will also be corrected if some insertion and deletion are found within the 16nt putative barcode.
+* **Trim the bases before and included in UMI from the demultiplexed reads.** The output format will be in fastq or fastq.gz. The header with be `@<16 nt BC>_<12 nt UMI>#read_id_<strand>`
+* **Significant runtime improvement** (~5-10 times faster)
+
+## Minor updates
+* `--emptydrop` option in v1.x is on by default and is no longer user-specified.
 * Add more information to the putative barcode table:
     * putative UMI
     * UMI end position (used for later trimming the adaptor-UMI sequence from each read)
     * Flanking bases before barcode and after UMI (for correction of insertion and deletion within the putative barcode and UMIs)
-* Add a final step to perform the read-to-whitelist assignment. A putative barcode (16nt) will first be extended to include flanking bases from both sides. Then we scan through the whitelist and find the one with the lowest subsequence edit distance (ED: defined as the minimum edits required to make a shorter sequence a subsequence of the longer one). The UMI position will also be corrected if some insertion and deletion are found within the 16nt putative barcode.
-* The bases before and included in UMI will be trimmed in the demultiplexed reads. The output format will be in fastq or fastq.gz. The header with be `@<16 nt BC>_<12 nt UMI>#read_id_<strand>`
-* `--emptydrop` option in v1.x is on by default and is no longer user-specified.
 
 # Installation
 `pip3 install blaze2`
