@@ -692,11 +692,11 @@ def main(argv=None):
                                     out_plot_fn = out_plot_fn)
             with open(out_whitelist_fn, 'w') as f:
                 for k in bc_whitelist.keys():
-                    f.write(k+'-1\n')
+                    f.write(k+'\n')
 
             with open(out_emptydrop_fn, 'w') as f:
                 for k in ept_bc:
-                    f.write(k+'-1\n')
+                    f.write(k+'\n')
                 helper.green_msg(f'Empty droplet barcode list saved as `{out_emptydrop_fn}`.')    
 
         except Exception as e:
