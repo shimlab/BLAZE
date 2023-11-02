@@ -252,7 +252,7 @@ def assign_read(fastq_fns, fastq_out, putative_bc_csv,
     whitelist = [] 
     with open(whitelsit_csv, 'r') as f:
         for line in f:
-            whitelist.append(line.split('-')[0])
+            whitelist.append(line.split('-')[0].strip())
     
     # assign putative barcode to whitelist
     # single thread version
@@ -260,11 +260,13 @@ def assign_read(fastq_fns, fastq_out, putative_bc_csv,
         demul_count_tot = 0
         count_tot = 0
         with open(fastq_out, 'wb') as output_handle:
-            for r_batch in tqdm(r_batches):
-                _, b_fast_str, demul_count, read_count = _assign_read_batches(r_batch, n_process, max_ed)
+            pbar = tqdm(unit="Reads", desc='Processed')
+            for r_batch in r_batches:
+                _, b_fast_str, demul_count, read_count = _assign_read_batches(r_batch, whitelist, max_ed,  gz)
                 demul_count_tot += demul_count
                 count_tot += read_count
                 output_handle.write(b_fast_str)
+                pbar.update(read_count)
 
         logger.info(helper.green_msg(f"Reads assignment completed. Demultiplexed read saved in {fastq_out}!", printit = False))
 
