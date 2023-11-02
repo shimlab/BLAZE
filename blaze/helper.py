@@ -181,16 +181,6 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
                 
             job_to_yield += 1
 
-        # # all jobs finished: yield complelted job in the submit order
-        # else:
-        #     while len(job_completed):
-        #         if pbar:
-        #             _pbar.update(job_completed[job_to_yield][1])
-        #         yield job_completed[job_to_yield][0]
-        #         del job_completed[job_to_yield]
-        #         job_to_yield += 1
-        #     break
-
 # multiproces panda data frame  
 def procee_batch(df,  row_func, *arg, **kwargs):
         return df.apply(row_func, axis=1, *arg, **kwargs)
@@ -203,7 +193,6 @@ def df_multiproceccing_apply(df, func, n_process, aggr_func=pd.concat, pbar = Tr
         Generator: split a large df by row into multiple 
         """
         sub_size = int(np.ceil(len(df) / n_part))
-        print(len(df), n_part, sub_size)
         batch_start, batch_end = 0, sub_size
         while batch_start < len(df):
             yield df.iloc[batch_start:batch_end,].copy()
@@ -218,10 +207,11 @@ def df_multiproceccing_apply(df, func, n_process, aggr_func=pd.concat, pbar = Tr
                            pbar = pbar, pbar_unit=pbar_unit,pbar_func=pbar_func, 
                            schduler = 'process', row_func = func, *arg, **kwargs)
 
-    rsts = [x.result() for x in rst_futures]
-    return aggr_func(rsts)
+    for i in rst_futures:
+        yield i.result()
+    # rsts = [x.result() for x in rst_futures]
+    # return aggr_func(rsts)
     
-
 # concatenate multiple files
 def concatenate_files(output_file, *input_files):
     with open(output_file, 'wb') as outfile:

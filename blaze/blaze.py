@@ -252,7 +252,7 @@ def parse_arg(argv):
     helper.check_exist([full_bc_whitelist, fastq_dir])
     
     if os.path.isdir(fastq_dir):
-        fastq_fns = helper.get_files(fastq_dir, ['*.fastq', '*.fq', '*.fastq.gz', '*.fg.gz'])
+        fastq_fns = helper.get_files(fastq_dir, ['*.fastq', '*.fq', '*.fastq.gz', '*.fq.gz'])
     elif os.path.isfile(fastq_dir):
         fastq_fns = [fastq_dir]
     else:
@@ -266,10 +266,10 @@ def parse_arg(argv):
     #     out_fastq_fn: os.path.exists(out_fastq_fn)
     # }
 
-    if not helper.check_suffix(out_fastq_fn, ['.fastq', '.fq', '.fastq.gz', '.fg.gz']):
+    if not helper.check_suffix(out_fastq_fn, ['.fastq', '.fq', '.fastq.gz', '.fq.gz']):
         helper.err_msg(
             f"Error in filename configuration:"
-            f"Filename '{out_fastq_fn}' should end with '.fastq', '.fq', '.fastq.gz' or '.fg.gz'. Please check the config.py file in BLAZE.")
+            f"Filename '{out_fastq_fn}' should end with '.fastq', '.fq', '.fastq.gz' or '.fq.gz'. Please check the config.py file in BLAZE.")
         sys.exit(1)
 
     if not helper.check_suffix(out_raw_bc_fn, '.csv'):
@@ -657,7 +657,6 @@ def main(argv=None):
     ###### Whitelisting
     ######################
     if do_whitelisting and (not os.path.exists(out_whitelist_fn) or overwrite):
-
         dfs = pd.read_csv(out_raw_bc_fn, chunksize=1_000_000)
         
         # get bc count dict (filtered by minQ)
@@ -737,7 +736,7 @@ def main(argv=None):
                 printit = False
             ))
         logger.info("Assigning reads to whitelist.\n")
-        read_assignment.main_multi_thread(fastq_fns, 
+        read_assignment.assign_read(fastq_fns, 
                                         out_fastq_fn, 
                                         out_raw_bc_fn, 
                                         out_whitelist_fn,
@@ -745,12 +744,15 @@ def main(argv=None):
                                         n_process,
                                         out_fastq_fn.endswith('.gz'), 
                                         batch_size)
-    elif os.path.exists(out_fastq_fn) and \
-        os.path.getmtime(out_fastq_fn) < os.path.getmtime(out_whitelist_fn):
+    else:
         logger.info(helper.warning_msg(
-            f"NOTE: The `{out_fastq_fn}` exists and has NOT been updated. However,"
-            f"the existing `{out_fastq_fn}` is older than the upstream output {out_whitelist_fn}."
+            f"NOTE: The `{out_fastq_fn}` exists and has NOT been updated.", printit = False))
+
+        if os.path.getmtime(out_fastq_fn) < os.path.getmtime(out_whitelist_fn):
+            logger.info(helper.warning_msg(
+            f"Warning: the existing `{out_fastq_fn}` is older than the upstream output {out_whitelist_fn}."
             f"If it needs to be re-generated. Please remove/rename the existing `{out_fastq_fn}` and re-run BLAZE "
         , printit = False))
+
 if __name__ == '__main__':
     main()
