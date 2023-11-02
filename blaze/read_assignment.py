@@ -208,10 +208,7 @@ def assign_barcodes(putative_bc_csv, whitelsit_csv, n_process, max_ed):
     
     # read putative barcode
     df = pd.read_csv(putative_bc_csv)
-    df = df.fillna('') # replace nan with empty string
-    # df['putative_umi'] = df['putative_umi'].fillna('')
-    # df['pre_bc_flanking'] = df['pre_bc_flanking'].fillna('')
-    # df['post_bc_flanking'] = df['post_bc_flanking'].fillna('')   
+    df = df.fillna('')
 
     # read whitelist
     whitelist = [] 

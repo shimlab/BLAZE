@@ -119,6 +119,8 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
         return type of the func: the yield the result in the order of submit
     """
     if schduler == 'process':
+        # make sure the number of process is not larger than the number of cores
+        n_process = min(n_process-1, mp.cpu_count()-1)
         executor = concurrent.futures.ProcessPoolExecutor(n_process)
     elif schduler == 'thread':
         executor = concurrent.futures.ThreadPoolExecutor(n_process)
@@ -129,51 +131,65 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
         _pbar = tqdm(unit=pbar_unit, desc='Processed')
         
     # A dictionary which will contain the future object
-    max_queue = n_process + 10
+    max_queue = n_process
     futures = {}
     n_job_in_queue = 0
     
     # make sure the result is yield in the order of submit.
     job_idx = 0
-    job_to_yield = 0
     job_completed = {}
 
+    # submit the first batch of jobs
+    while n_job_in_queue < max_queue:
+        i = next(iterator, None)
+        if i is None:
+            break
+        futures[executor.submit(func, i, *arg, **kwargs)] = (pbar_func(i),job_idx)
+        job_idx += 1
+        n_job_in_queue += 1
+        job_to_yield = 0
+    # yield the result in the order of submit and submit new jobs
     while True:
-        while n_job_in_queue < max_queue:
-            i = next(iterator, None)
-            if i is None:
-                break
-            futures[executor.submit(func, i, *arg, **kwargs)] = (pbar_func(i),job_idx)
-            job_idx += 1
-            n_job_in_queue += 1
-
         # will wait until as least one job finished
         # batch size as value, release the cpu as soon as one job finished
         job = next(as_completed(futures), None)
-        
-        # no more job  
+        if job is not None:
+            n_job_in_queue -= 1
+
+        # yield the completed job in the order of submit  
         if job is not None:
             job_completed[futures[job][1]] = job, futures[job][0]
             del futures[job]
-            #print(job_completed.keys())
-            # check order
-            while job_to_yield in job_completed.keys():
-                # update pregress bar based on batch size
-                if pbar:
-                    _pbar.update(job_completed[job_to_yield][1])
-                yield job_completed[job_to_yield][0]
-                n_job_in_queue -= 1
-                del job_completed[job_to_yield]
-                job_to_yield += 1
-        # all jobs finished: yield complelted job in the submit order
-        else:
-            while len(job_completed):
-                if pbar:
-                    _pbar.update(job_completed[job_to_yield][1])
-                yield job_completed[job_to_yield][0]
-                del job_completed[job_to_yield]
-                job_to_yield += 1
+
+        if n_job_in_queue == 0 and i is None and not len(futures):
             break
+
+        # check order
+        while job_to_yield in job_completed.keys():
+            # update pregress bar based on batch size
+            if pbar:
+                _pbar.update(job_completed[job_to_yield][1])
+            yield job_completed[job_to_yield][0]
+            del job_completed[job_to_yield]
+            
+            # submit new job
+            i = next(iterator, None)
+            if i is not None:
+                futures[executor.submit(func, i, *arg, **kwargs)] = (pbar_func(i),job_idx)
+                job_idx += 1
+                n_job_in_queue += 1
+                
+            job_to_yield += 1
+
+        # # all jobs finished: yield complelted job in the submit order
+        # else:
+        #     while len(job_completed):
+        #         if pbar:
+        #             _pbar.update(job_completed[job_to_yield][1])
+        #         yield job_completed[job_to_yield][0]
+        #         del job_completed[job_to_yield]
+        #         job_to_yield += 1
+        #     break
 
 # multiproces panda data frame  
 def procee_batch(df,  row_func, *arg, **kwargs):

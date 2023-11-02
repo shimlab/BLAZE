@@ -618,14 +618,12 @@ def main(argv=None):
                                                 read_batchs, n_process=n_process, 
                                                 min_q=min_phred_score)
 
-        raw_bc_count = Counter([])
-        raw_bc_pass_count = Counter([])    
+        raw_bc_pass_count = defaultdict(int)
         rst_dfs = []
         for idx, f in enumerate(rst_futures):
             count_bc, count_pass, rst_df = f.result() #write rst_df out
-
-            raw_bc_count += count_bc
-            raw_bc_pass_count += count_pass
+            for k,v in count_pass.items():
+                raw_bc_pass_count[k] += v
             if idx == 0:
                 rst_df.to_csv(out_raw_bc_fn, index=False)
             else:
