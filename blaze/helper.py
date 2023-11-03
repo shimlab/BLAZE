@@ -153,15 +153,14 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
         # will wait until as least one job finished
         # batch size as value, release the cpu as soon as one job finished
         job = next(as_completed(futures), None)
-        if job is not None:
-            n_job_in_queue -= 1
 
         # yield the completed job in the order of submit  
         if job is not None:
             job_completed[futures[job][1]] = job, futures[job][0]
             del futures[job]
 
-        if n_job_in_queue == 0 and i is None and not len(futures):
+        # 
+        if job is None and i is None and len(job_completed)==0:
             break
 
         # check order
@@ -177,7 +176,6 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
             if i is not None:
                 futures[executor.submit(func, i, *arg, **kwargs)] = (pbar_func(i),job_idx)
                 job_idx += 1
-                n_job_in_queue += 1
                 
             job_to_yield += 1
 

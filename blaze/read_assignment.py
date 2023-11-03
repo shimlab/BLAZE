@@ -291,17 +291,6 @@ def assign_read(fastq_fns, fastq_out, putative_bc_csv,
                 count_tot += read_count
                 output_handle.write(b_fast_str)
         logger.info(helper.green_msg(f"Reads assignment completed. Demultiplexed read saved in {fastq_out}!", printit = False))
-    # rst_futures = helper.multiprocessing_submit(batch_barcode_to_fastq, 
-    #                        r_batches_with_idx, 
-    #                        n_process=n_process*4,
-    #                        schduler = "thread",
-    #                        pbar_func=lambda x: len(x[0]),
-    #                         assignment_df = assignment_df,
-    #                         gz = gz)
-
-
-
-    
 
 if __name__ == '__main__':
     #assign_read()
