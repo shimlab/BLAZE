@@ -1,4 +1,4 @@
-<img src="logo.png" width="300"/>
+<img src="https://github.com/shimlab/BLAZE/blob/main/logo.png" width="300"/>
 
 # BLAZE (Barcode identification from Long reads for AnalyZing single-cell gene Expression)
 ![PyPI - Version](https://img.shields.io/pypi/v/blaze2?label=Version)
