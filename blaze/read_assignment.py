@@ -228,13 +228,11 @@ def _assign_read_batches(r_batch, whitelist, max_ed, gz):
         out_buffer += '+\n'
         out_buffer += qscore + '\n'
 
-    b_out_buffer = out_buffer.encode('utf-8')
+    
     if gz:
-        compressed_data = io.BytesIO()
-        with gzip.GzipFile(fileobj=compressed_data, mode='wb') as file:
-            # Write the binary data to the GzipFile (note: x is just a placeholder to mute the return).
-            x = file.write(b_out_buffer)
-            b_out_buffer = compressed_data.getvalue()
+        b_out_buffer = gzip.compress(out_buffer.encode('utf-8'))
+    else:
+        b_out_buffer = out_buffer.encode('utf-8')
 
     return df, b_out_buffer, demul_read_count, len(read_batch)
     # logger.info(helper.green_msg(f"Demultiplexing finshied: ", printit = False))
