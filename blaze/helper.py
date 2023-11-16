@@ -11,6 +11,7 @@ import shutil
 import time
 from collections import namedtuple
 
+
 def reverse_complement(seq):
 	'''
 	Args: <str>
@@ -23,8 +24,6 @@ def reverse_complement(seq):
 	letters = \
 		[comp[base] if base in comp.keys() else base for base in seq]
 	return ''.join(letters)[::-1]
-
-
 
 def err_msg(msg):
 	CRED = '\033[91m'
@@ -118,18 +117,36 @@ def multiprocessing_submit(func, iterator, n_process=mp.cpu_count()-1 ,
     Yields:
         return type of the func: the yield the result in the order of submit
     """
+    class fake_future:
+        # a fake future class to be used in single processing
+        def __init__(self, rst):
+            self.rst = rst
+        def result(self):
+            return self.rst
+
     if schduler == 'process':
         # make sure the number of process is not larger than the number of cores
         n_process = min(n_process-1, mp.cpu_count()-1)
-        executor = concurrent.futures.ProcessPoolExecutor(n_process)
+        if n_process > 1:
+            executor = concurrent.futures.ProcessPoolExecutor(n_process)
     elif schduler == 'thread':
-        executor = concurrent.futures.ThreadPoolExecutor(n_process)
+        if n_process > 1:
+            executor = concurrent.futures.ThreadPoolExecutor(n_process)
     else:
         green_msg('Error in multiprocessing_submit: schduler should be either process or thread', printit=True)
         sys.exit(1)
+
     if pbar:
         _pbar = tqdm(unit=pbar_unit, desc='Processed')
         
+    # run in single process/thread if n_process < 1
+    if n_process <= 1:
+        for it in iterator:
+            yield fake_future(func(it, *arg, **kwargs))
+            if pbar:
+                _pbar.update(pbar_func(it))
+        return
+
     # A dictionary which will contain the future object
     max_queue = n_process
     futures = {}
@@ -224,11 +241,11 @@ def get_files(search_dir, extensions, recursive=True):
     if recursive:
         for i in extensions:
             files.extend(Path(search_dir).rglob(i))
-        return files
+        return sorted(files)
     else:
         for i in extensions:
             files.extend(Path(search_dir).glob(i))
-        return files
+        return sorted(files)
 
 # check file exist. Exit if not
 def check_exist(file_list):
@@ -285,3 +302,4 @@ def check_suffix(filename, suffix_lst):
         return True
     else: 
         return False
+
