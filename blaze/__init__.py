@@ -1,4 +1,4 @@
-from .blaze import main as _pipeline
+from .main import main as _pipeline
 
 def blaze(argv = None):
     if argv == None:
