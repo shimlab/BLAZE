@@ -3,6 +3,7 @@
 # BLAZE (Barcode identification from Long reads for AnalyZing single-cell gene Expression)
 ![PyPI - Version](https://img.shields.io/pypi/v/blaze2?label=Version)
 ![Github All Releases](https://img.shields.io/github/downloads/shimlab/BLAZE/total?label=Github%20Downloads)
+![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/shimlab/BLAZE/unittest.yml?logo=github&label=TEST)
 ![PyPI - License](https://img.shields.io/pypi/l/blaze2)
 [![Downloads](https://static.pepy.tech/badge/BLAZE2)](https://pepy.tech/project/BLAZE2)
 
