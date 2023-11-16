@@ -10,6 +10,7 @@ setup(
     author_email="youyupei@gmail.com",
     description='Barcode identification from Long reads for AnalyZing single cell gene Expression',
     packages=find_packages(),
+    test_suite='test',
     long_description=long_description,
     long_description_content_type='text/markdown',
     package_data={'blaze': ['10X_bc/3M-february-2018.zip', '10X_bc/737K-august-2016.txt']},
