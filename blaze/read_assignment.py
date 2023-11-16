@@ -173,7 +173,9 @@ def _read_and_bc_batch_generator_with_idx(fastq_fns, putative_bc_csv, batch_size
 
                     yield batch, read_idx, batch_bc_df
                     read_idx += batch_len
+    putative_bc_f.close()
 
+    
 def _assign_read_batches(r_batch, whitelist, max_ed, gz):
     """Single-thread function:
         Assign all putative barcode to whiteliested barcode

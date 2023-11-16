@@ -139,7 +139,13 @@ def parse_arg(argv):
     if not argv:
         argv = sys.argv
     else:
-        argv = ['blaze.py'] + shlex.split(argv)
+        if isinstance(argv, str):
+            argv = ['blaze.py'] + shlex.split(argv)
+        elif isinstance(argv, list):
+            argv = ['blaze.py'] + argv
+        else:
+            helper.err_msg("Error: Invalid argument input, the argument should be a string or a list.") 
+            sys.exit(1)
     
     
     # Default 
