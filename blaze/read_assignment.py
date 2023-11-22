@@ -153,10 +153,11 @@ def _read_and_bc_batch_generator_with_idx(fastq_fns, putative_bc_csv, batch_size
                 
                 for batch in batch_iter:
                     batch_len = len(batch)
-                    batch_bc_df = StringIO(
-                        putative_bc_header + \
-                        ''.join([next(putative_bc_f) for x in range(batch_len)])
-                    )
+                    batch_bc_df = pd.read_csv(
+                        StringIO(
+                            putative_bc_header + \
+                            ''.join([next(putative_bc_f) for x in range(batch_len)])
+                        ))
                     yield batch, read_idx, batch_bc_df
                     read_idx += batch_len
         else:
