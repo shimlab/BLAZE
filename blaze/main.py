@@ -117,8 +117,6 @@ def parse_arg(argv):
                 --minimal_stdout
                     Minimise the command-line printing
 
-
-
             High sensitivity mode:
                 --high-sensitivity-mode:
                     Turn on the sensitivity mode, which increases the sensitivity of barcode
@@ -352,7 +350,7 @@ def get_raw_bc_from_reads(reads, min_q=0):
         putative_bcs.append(read.raw_bc)
         putative_bc_min_qs.append(read.raw_bc_min_q)
         umis.append(read.putative_UMI)
-        trim_idxs.append(read.adator_trimming_idx)
+        trim_idxs.append(read.polyT_trimming_idx)
         pre_bc_flankings.append(read.pre_bc_flanking)
         post_umi_flankings.append(read.post_umi_flanking)
         
@@ -369,7 +367,7 @@ def get_raw_bc_from_reads(reads, min_q=0):
          'putative_bc': putative_bcs,
          'putative_bc_min_q': putative_bc_min_qs,
         'putative_umi': umis,
-        'umi_end': trim_idxs,
+        'polyT_end': trim_idxs,
         'pre_bc_flanking': pre_bc_flankings,
         'post_umi_flanking': post_umi_flankings
         }

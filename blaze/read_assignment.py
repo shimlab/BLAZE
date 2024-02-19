@@ -47,9 +47,9 @@ def _match_bc_row(row, whitelist, max_ed):
                   '-' for read with negative strand
 
     """
-    if not row.umi_end:
+    if not row.polyT_end:
         strand = ''
-    elif row.umi_end > 0:
+    elif row.polyT_end > 0:
         strand = '+'
     else: 
         strand = '-'
@@ -115,12 +115,12 @@ def batch_barcode_to_fastq(r_batches_with_idx, assignment_df ,gz = True):
         if not row.BC_corrected:
             continue
 
-        if row.umi_end < 0:
-            seq = r.seq[:int(row.umi_end)]
-            qscore = r.qscore[:int(row.umi_end)]
+        if row.polyT_end < 0:
+            seq = r.seq[:int(row.polyT_end)]
+            qscore = r.qscore[:int(row.polyT_end)]
         else:
-            seq = r.seq[int(row.umi_end):]
-            qscore = r.qscore[int(row.umi_end):]
+            seq = r.seq[int(row.polyT_end):]
+            qscore = r.qscore[int(row.polyT_end):]
         
         out_buffer += f"@{row.BC_corrected}_{row.putative_umi}#{row.read_id}_{row.strand}\n"
         out_buffer += str(seq) + '\n'
@@ -218,13 +218,12 @@ def _assign_read_batches(r_batch, whitelist, max_ed, gz):
 
         if not bc.BC_corrected:
             continue
-
-        if bc.umi_end < 0:
-            seq = r.seq[:int(bc.umi_end)]
-            qscore = r.qscore[:int(bc.umi_end)]
+        if bc.polyT_end < 0:
+            seq = r.seq[:int(bc.polyT_end)]
+            qscore = r.qscore[:int(bc.polyT_end)]
         else:
-            seq = r.seq[int(bc.umi_end):]
-            qscore = r.qscore[int(bc.umi_end):]
+            seq = r.seq[int(bc.polyT_end):]
+            qscore = r.qscore[int(bc.polyT_end):]
         
         out_buffer += f"@{bc.BC_corrected}_{bc.putative_umi}#{bc.read_id}_{bc.strand}\n"
         out_buffer += str(seq) + '\n'

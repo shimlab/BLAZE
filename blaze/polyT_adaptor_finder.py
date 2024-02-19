@@ -290,6 +290,43 @@ class Read(object):
                 self.raw_bc_start+16+DEFAULT_UMI_SIZE: \
                     self.raw_bc_start+16+DEFAULT_UMI_SIZE+DEFAULT_GRB_FLANKING_SIZE]
     
+    @property
+    def polyT_trimming_idx(self):
+        """sequencing after trimming the adaptor and UMI
+        Returns:
+            index of the end of the polyT, negative if it's polyA strand
+        """
+        
+        
+        umi_end_idx = self.adator_trimming_idx
+        
+        if umi_end_idx is None:
+            return None
+        
+        # take reverse complement if read is coming from transcript strand (with ployA instead ployT)
+        if umi_end_idx < 0:
+            reversed = True
+            seq = helper.reverse_complement(self.seq)
+            umi_end_idx = abs(umi_end_idx)
+        else: 
+            reversed = False
+            seq = self.seq
+
+        # find the first appearance of TTTT in seq
+        polyT_start = seq.find('TTTT', umi_end_idx)
+        if polyT_start == -1:
+            return umi_end_idx
+        
+        read_code = np.array([int(x == 'T') for x in seq])
+        for idx, nt in enumerate(read_code[polyT_start:]):
+            if nt == 1:
+                polyT_start += 1
+            elif sum(read_code[polyT_start:polyT_start+10]) >= 7: # hard code definition of polyT. plotT end when >3 of 10 consecutive letter are not T 
+                polyT_start += 1
+            else:
+                break 
+        return int(polyT_start) if not reversed else int(-polyT_start)
+
 
     @property
     def strand(self):

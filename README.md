@@ -26,9 +26,9 @@ Combining single-cell RNA sequencing with Nanopore long-read sequencing enables 
 * `--emptydrop` option in v1.x is on by default and is no longer user-specified.
 * Add more information to the putative barcode table:
     * putative UMI
-    * UMI end position (used for later trimming the adaptor-UMI sequence from each read)
+    * UMI end position (used for later trimming the adaptor-UMI sequence from each read) (v2.1)
+    * PolyT end position (used for later trimming the adaptor-UMI-polyT sequence from each read) (from v2.2)
     * Flanking bases before barcode and after UMI (for correction of insertion and deletion within the putative barcode and UMIs)
-
 # Installation
 `pip3 install blaze2`
 
