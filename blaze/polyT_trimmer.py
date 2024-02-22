@@ -60,8 +60,7 @@ def polyT_trimming_idx(seq, reverse=False, umi_end_idx=0, polyT_end_minT=7, poly
             polyT_start += 1
         else:
             break 
-
-    return int(polyT_start) if not reversed else int(-polyT_start)
+    return int(polyT_start) if not reverse else int(-polyT_start)
 
 
 def _read_batch_generator(fastq_fns, batch_size):
@@ -109,7 +108,6 @@ def _proc_read_batches(read_batch, gz):
     for r in read_batch:
         strand = r.id.split('_')[-1].strip()
         polyT_end = polyT_trimming_idx(r.seq, reverse=strand=='-')
-
         if polyT_end < 0:
             seq = r.seq[:int(polyT_end)]
             qscore = r.qscore[:int(polyT_end)]
@@ -171,17 +169,5 @@ def polyT_trimmer(fastq_fns, fastq_out, n_process, gz, batchsize):
 if __name__ == '__main__':
     fastq_fns, fastq_out, n_process, gzip_out = parse_command_line()
     polyT_trimmer(fastq_fns, fastq_out, n_process, gz=gzip_out, batchsize=4000)
-                            pbar_func=lambda x: len(x[0]),
-                            gz = gz)
         
-        # collect results
-        demul_count_tot = 0
-        count_tot = 0
-        with open(fastq_out, 'wb') as output_handle:
-            for f in rst_futures:
-                b_fast_str, read_count = f.result()
-                output_handle.write(b_fast_str)
-        logger.info(helper.green_msg(f"PolyT trimming completed! saved in {fastq_out}!", printit = False))
 
-if __name__ == '__main__':
-    fastq_fns, fastq_out, n_process = parse_command_line()
