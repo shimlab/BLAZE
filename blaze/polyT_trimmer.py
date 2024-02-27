@@ -115,7 +115,7 @@ def _proc_read_batches(read_batch, gz):
             seq = r.seq[int(polyT_end):]
             qscore = r.qscore[int(polyT_end):]
         
-        out_buffer += r.id + '\n'
+        out_buffer += '@' + r.id + '\n'
         out_buffer += str(seq) + '\n'
         out_buffer += '+\n'
         out_buffer += qscore + '\n'
