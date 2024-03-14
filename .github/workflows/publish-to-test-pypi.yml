@@ -1,8 +1,10 @@
 name: Publish Python distributions to PyPI and TestPyPI
 on:
   push:
+    branches:
+      - main
     tags:
-      - 'v*' # Trigger the workflow when a new tag starting with 'v' is pushed
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
   build-n-publish:
