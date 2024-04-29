@@ -112,7 +112,11 @@ class Read(object):
             T_prop = helper.sliding_window_mean(read_code, poly_T_len)
             return np.where(T_prop >= min_match_prop)[0]  
 
+        strand = self._strand if not strand else strand
+        read = self.seq if not read else read
+
         if strand == '-':
+            seq = read[:num_nt]
             # find polyT
             ply_T_idx = find_poly_T(seq)
             d1, d2 = SEQ_SUFFIX_AFT_ADPT
