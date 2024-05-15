@@ -212,9 +212,9 @@ class Read(object):
             if self.strand == '+':
                 self.raw_bc = \
                     helper.reverse_complement(
-                            self.seq)[self.raw_bc_start: self.raw_bc_start+16]
+                            self.seq)[self.raw_bc_start: self.raw_bc_start+DEFAULT_BC_SIZE]
             else: 
-                self.raw_bc = self.seq[self.raw_bc_start: self.raw_bc_start+16]
+                self.raw_bc = self.seq[self.raw_bc_start: self.raw_bc_start+DEFAULT_BC_SIZE]
 
             if self.phred_score is not None:
                 if self.strand == '+':
@@ -222,7 +222,7 @@ class Read(object):
                 else:
                     phred_score = self.phred_score
 
-                bc_phred_score = phred_score[self.raw_bc_start: self.raw_bc_start+16]      
+                bc_phred_score = phred_score[self.raw_bc_start: self.raw_bc_start+DEFAULT_BC_SIZE]      
 
                 self.raw_bc_min_q = min([ord(x) for x in bc_phred_score]) - 33
 
@@ -242,9 +242,9 @@ class Read(object):
         if not self._strand:
             return None
         elif self._strand == '+':
-            return int(-self.raw_bc_start-16-DEFAULT_UMI_SIZE)
+            return int(-self.raw_bc_start-DEFAULT_BC_SIZE-DEFAULT_UMI_SIZE)
         else: 
-            return int(self.raw_bc_start+16+DEFAULT_UMI_SIZE)
+            return int(self.raw_bc_start+DEFAULT_BC_SIZE+DEFAULT_UMI_SIZE)
 
     @property
     def putative_UMI(self):
@@ -254,10 +254,10 @@ class Read(object):
             return None
         elif self._strand == '+':
             return helper.reverse_complement(
-                        self.seq)[self.raw_bc_start+16: self.raw_bc_start+16+DEFAULT_UMI_SIZE]
+                        self.seq)[self.raw_bc_start+DEFAULT_BC_SIZE: self.raw_bc_start+DEFAULT_BC_SIZE+DEFAULT_UMI_SIZE]
         else: 
             return self.seq[
-                self.raw_bc_start+16: self.raw_bc_start+16+DEFAULT_UMI_SIZE]
+                self.raw_bc_start+DEFAULT_BC_SIZE: self.raw_bc_start+DEFAULT_BC_SIZE+DEFAULT_UMI_SIZE]
     
     @property
     def pre_bc_flanking(self):
@@ -283,12 +283,12 @@ class Read(object):
             return None
         elif self._strand == '+':
             return helper.reverse_complement(
-                        self.seq)[self.raw_bc_start+16+DEFAULT_UMI_SIZE: \
-                                  self.raw_bc_start+16+DEFAULT_UMI_SIZE+ DEFAULT_GRB_FLANKING_SIZE]
+                        self.seq)[self.raw_bc_start+DEFAULT_BC_SIZE+DEFAULT_UMI_SIZE: \
+                                  self.raw_bc_start+DEFAULT_BC_SIZE+DEFAULT_UMI_SIZE+ DEFAULT_GRB_FLANKING_SIZE]
         else: 
             return self.seq[
-                self.raw_bc_start+16+DEFAULT_UMI_SIZE: \
-                    self.raw_bc_start+16+DEFAULT_UMI_SIZE+DEFAULT_GRB_FLANKING_SIZE]
+                self.raw_bc_start+DEFAULT_BC_SIZE+DEFAULT_UMI_SIZE: \
+                    self.raw_bc_start+DEFAULT_BC_SIZE+DEFAULT_UMI_SIZE+DEFAULT_GRB_FLANKING_SIZE]
     
     @property
     def polyT_trimming_idx(self):
