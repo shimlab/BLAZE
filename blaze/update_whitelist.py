@@ -37,7 +37,7 @@ def parse_arg():
     #parser.add_argument('opt_pos_arg', type=int, nargs='?',help)
 
     # Optional argument
-    parser.add_argument('--kit-version', type=str, default='v3',
+    parser.add_argument('--kit-version', type=str, default='3v3',
                         help= textwrap.dedent(
                             '''
                             Choose from v2 and v3 (for 10X Single Cell 3ʹ gene expression v2 or v3). 
@@ -88,8 +88,8 @@ def parse_arg():
         args.high_sensitivity_mode = False
     
     args.kit_version = args.kit_version.lower()
-    if args.kit_version not in ['v2', 'v3']:
-        helper.err_msg("Error: Invalid value of --kit-version, please choose from v3 or v2") 
+    if args.kit_version not in ['3v2', '3v3', '5v3']:
+        helper.err_msg("Error: Invalid value of --kit-version, please choose from 3v3 or 3v2 or 5v3") 
         sys.exit()
 
     if args.full_bc_whitelist:
@@ -97,9 +97,9 @@ def parse_arg():
                 f'You are using {os.path.basename(args.full_bc_whitelist)} as the full barcode'\
                 'whitelist. Note that the barcodes not listed in the file will never be found.'))
     else:
-        if args.kit_version == 'v3':
+        if args.kit_version == '3v3':
             args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_V3
-        elif args.kit_version == 'v2':
+        elif args.kit_version == '3v2' or args.kit_version == '5v3':
             args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_V2
 
     # check file 

@@ -24,12 +24,13 @@ class Read(object):
 
 
     """
-    def __init__(self, read_id, sequence, phred_score=None, strand = None, **kwargs):
+    def __init__(self, read_id, sequence, phred_score=None, strand = None, kit=None, **kwargs):
         self.id = read_id
         self.seq = sequence
         self.phred_score = phred_score
         self._strand = strand
         self._get_strand_and_raw_bc_flag = False # record whether the raw bc searching has been performed
+        self.kit = kit
         for key in kwargs.keys():
             self.__dict__[key] = kwargs[key]
             
@@ -39,35 +40,53 @@ class Read(object):
         else:    
             self.__dict__[attr_name] = attr_val
     
-    
-    def find_adaptor(self,read=None, strand=None, adaptor_seq=ADPT_SEQ, 
-                        num_nt=ADPT_WIN, max_ed=ADPT_MAC_MATCH_ED):
-        '''
-        find adaptor from a read
-    
-        Parameters
-        ----------
-        read : STR
-        num_nt : INT
-            The adaptor will be searched within first num_nt bases in the reads.
-        strand : '+' or '-'
-            Transcript strand, this function will find adaptor in '-' poly T strand
-            Will do a reverse complement if strand == '-'
-        adaptor_seq : STR
-            10X adaptor sequence, the full-length adaptor sequence is 
-            'CTACACGACGCTCTTCCGATCT' (22nt). Last 12nt is used by default.
-        max_ed : float
-            max edit distance in the adaptor alignment. Default: 2
-        Returns
-        -------
-        Dict
-        '''
-        # check input
+    def find_adapter_5_prime(self, read=None, strand=None, adapter_seq=ADPT_SEQ,
+                             num_nt=ADPT_WIN,max_ed=ADPT_MAC_MATCH_ED,
+                             tso_seq=TSO_SEQ):
+        
         strand = self._strand if not strand else strand
         read = self.seq if not read else read
 
+        if strand == '-':
+            seq = read[:num_nt]
+            d1, d2 = SEQ_SUFFIX_AFT_ADPT
+            _, tso_seq_end = sub_edit_distance(seq, tso_seq, max_ed)
+            if tso_seq_end > 0:
+                tso_seq_start = max(0, tso_seq_end-len(TSO_SEQ))
+
+                _, sub_seq_end = sub_edit_distance(
+                    seq[max(0,tso_seq_start-d2):max(0,tso_seq_start-d1)],
+                    adapter_seq, max_ed)
+
+                return {'-':[max(0,tso_seq_start-d2)+sub_seq_end+1]} if sub_seq_end > 0 else {}
+            else:
+                return {}
+        
+        if strand == '+':
+            read = helper.reverse_complement(read[-num_nt:])
+            adpt_ends = self.find_adapter_5_prime(
+                read=read, strand='-', adapter_seq=adapter_seq, num_nt=num_nt,
+                max_ed=max_ed, tso_seq=tso_seq).get('-', [])
+
+            return {'+':adpt_ends} if len(adpt_ends) else {}
+        else:
+            
+            fwd_strand = self.find_adapter_5_prime(
+                strand='-', adapter_seq=adapter_seq, 
+                num_nt=num_nt, tso_seq=tso_seq)
+            rev_strand = self.find_adapter_5_prime(
+                strand='+', adapter_seq=adapter_seq, 
+                num_nt=num_nt, tso_seq=tso_seq)
+
+            rst = {**{k:v for k,v in fwd_strand.items() if len(v)},
+                   **{k:v for k,v in rev_strand.items() if len(v)}}
+            return rst
+
+    def find_adaptor_3_prime(self, read=None, strand=None, adaptor_seq=ADPT_SEQ, 
+                        num_nt=ADPT_WIN, max_ed=ADPT_MAC_MATCH_ED):
+        
         def find_poly_T(seq, poly_T_len=PLY_T_LEN, 
-                              min_match_prop=PLY_T_MIN_MATCH_PROP):
+                              min_match_prop=SEQ_SUFFIX_MIN_MATCH_PROP):
             '''Find poly T in seq
             Parameters
             ----------
@@ -93,13 +112,14 @@ class Read(object):
             T_prop = helper.sliding_window_mean(read_code, poly_T_len)
             return np.where(T_prop >= min_match_prop)[0]  
 
-    
+        strand = self._strand if not strand else strand
+        read = self.seq if not read else read
+
         if strand == '-':
             seq = read[:num_nt]
-
             # find polyT
             ply_T_idx = find_poly_T(seq)
-            d1, d2 = PLY_T_NT_AFT_ADPT
+            d1, d2 = SEQ_SUFFIX_AFT_ADPT
             ply_T_idx = ply_T_idx[ply_T_idx >= d1]
             adpt_ends = []
             searching_win = []
@@ -127,22 +147,53 @@ class Read(object):
         # take reverse complement if read is coming from transcript strand (with ployA instead ployT)
         if strand == '+':
             read = helper.reverse_complement(read[-num_nt:])
-            adpt_ends = self.find_adaptor(
+            adpt_ends = self.find_adaptor_3_prime(
                             read, strand='-', adaptor_seq=adaptor_seq, 
                             num_nt=num_nt).get('-',[])
             return {'+':adpt_ends} if len(adpt_ends) else {}
                 
         else:
-            T_strand = self.find_adaptor(
+            T_strand = self.find_adaptor_3_prime(
                 strand='-', adaptor_seq=adaptor_seq, 
                 num_nt=num_nt)
-            A_strand = self.find_adaptor(
+            A_strand = self.find_adaptor_3_prime(
                 strand='+', adaptor_seq=adaptor_seq, 
                 num_nt=num_nt)
             rst = {**{k:v for k,v in T_strand.items() if len(v)},
                    **{k:v for k,v in A_strand.items() if len(v)}}
             return rst
 
+    
+    def find_adaptor(self,read=None, strand=None, adaptor_seq=ADPT_SEQ, 
+                        num_nt=ADPT_WIN, max_ed=ADPT_MAC_MATCH_ED, tso_seq=TSO_SEQ):
+        '''
+        find adaptor from a read
+    
+        Parameters
+        ----------
+        read : STR
+        num_nt : INT
+            The adaptor will be searched within first num_nt bases in the reads.
+        strand : '+' or '-'
+            Transcript strand, this function will find adaptor in '-' poly T strand
+            Will do a reverse complement if strand == '-'
+        adaptor_seq : STR
+            10X adaptor sequence, the full-length adaptor sequence is 
+            'CTACACGACGCTCTTCCGATCT' (22nt). Last 12nt is used by default.
+        max_ed : float
+            max edit distance in the adaptor alignment. Default: 2
+        Returns
+        -------
+        Dict
+        '''
+
+        if self.kit == '3v3' or self.kit == '3v2':
+            return self.find_adaptor_3_prime(read=read, strand=strand,
+                adaptor_seq=adaptor_seq, num_nt=num_nt, max_ed=max_ed)
+        else:
+            return self.find_adapter_5_prime(read=read, strand=strand,
+                adapter_seq=adaptor_seq, num_nt=num_nt, max_ed=max_ed,
+                tso_seq=tso_seq)
 
     def get_strand_and_raw_bc(self):
         '''
