@@ -222,6 +222,10 @@ def parse_arg(argv):
     out_emptydrop_fn = prefix + DEFAULT_EMPTY_DROP_FN
     out_plot_fn = prefix + DEFAULT_KNEE_PLOT_FN
     summary_fn = prefix + DEFAULT_BC_STAT_FN
+    # create output directory if not exist
+    out_dir = os.path.dirname(out_fastq_fn)
+    if out_dir and not os.path.exists(out_dir):
+        os.makedirs(out_dir)
 
     if kit not in ['v2', 'v3']:
         helper.err_msg("Error: Invalid value of --kit-version, please choose from v3 or v2") 
