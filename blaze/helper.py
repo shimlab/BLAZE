@@ -236,26 +236,32 @@ def concatenate_files(output_file, *input_files):
             os.remove(input_file)    
 
 # get file with a certian extensions
-def get_files(search_dir, extensions, recursive=True):
+def get_files_by_suffix(search_dir, suffix, recursive=True):
     files = []
+    if isinstance(suffix, str):
+        suffix = [suffix]
     if recursive:
-        for i in extensions:
+        for i in suffix:
             files.extend(Path(search_dir).rglob(i))
         return sorted(files)
     else:
-        for i in extensions:
+        for i in suffix:
             files.extend(Path(search_dir).glob(i))
         return sorted(files)
 
 # check file exist. Exit if not
-def check_exist(file_list):
+def check_files_exist(file_list):
+    if isinstance(file_list, str):
+        file_list = [file_list]
     exit_code = 0
     for fn in file_list:
         if not os.path.exists(fn):
             exit_code = 1
             err_msg(f'Error: can not find {fn}')
     if exit_code == 1:
-        sys.exit()
+        sys.exit(1)
+    else:
+        return True
 
 # split any iterator in to batches  
 def batch_iterator(iterator, batch_size):

@@ -240,10 +240,22 @@ def _assign_read_batches(r_batch, whitelist, max_ed, gz):
     # logger.info(helper.green_msg(f"Demultiplexing finshied: ", printit = False))
     # logger.info(helper.green_msg(f"Successfully demultiplexed reads / Total reads: {sum(df.BC_corrected!='')} / {len(df.BC_corrected)}. ", printit = False))
 
-def assign_read(fastq_fns, fastq_out, putative_bc_csv, 
-                      whitelsit_csv, max_ed, n_process, gz, batchsize):
+def assign_read(fastq_fns=None, fastq_out=None, putative_bc_csv=None, 
+                    whitelsit_csv,=None max_ed=None, n_process=None, gz=None,
+                    batchsize=None, args=None):
     """Main function: Demultiplex fastq files using putative barcode csv and whitelist csv
     """
+    # check input
+    if args:
+        fastq_fns = args.fastq_fns
+        fastq_out = args.output_fastq
+        putative_bc_csv = args.out_raw_bc_fn
+        whitelsit_csv = args.out_whitelist_fn
+        max_ed = args.max_edit_distance
+        n_process = args.threads
+        gz = args.output_fastq.endswith('.gz')
+        batchsize = args.batch_size
+
     # greating generator for read and putative barcode batches
     r_batches = \
         _read_and_bc_batch_generator_with_idx(fastq_fns, putative_bc_csv, batchsize)
@@ -291,6 +303,8 @@ def assign_read(fastq_fns, fastq_out, putative_bc_csv,
                 count_tot += read_count
                 output_handle.write(b_fast_str)
         logger.info(helper.green_msg(f"Reads assignment completed. Demultiplexed read saved in {fastq_out}!", printit = False))
+
+    return demul_count_tot, count_tot
 
 if __name__ == '__main__':
     #assign_read()

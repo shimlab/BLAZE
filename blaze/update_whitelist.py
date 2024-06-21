@@ -103,7 +103,7 @@ def parse_arg():
             args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_V2
 
     # check file 
-    helper.check_exist([args.full_bc_whitelist, args.putative_bc_csv])
+    helper.check_files_exist([args.full_bc_whitelist, args.putative_bc_csv])
     return args
 
 
