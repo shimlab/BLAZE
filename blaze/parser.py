@@ -287,7 +287,7 @@ def update_pipeline_args(args):
 
     else:
         args.do_demultiplexing = True
-        output_exists = os.path.exists(args.output_fastq)
+        output_exists = os.path.exists(args.output_fastq) and os.path.exists(args.out_whitelist_fn)
         output_time_correct = \
             os.path.getmtime(args.output_fastq) > os.path.getmtime(args.out_whitelist_fn) if output_exists else True
 
@@ -298,7 +298,7 @@ def update_pipeline_args(args):
             pipeline_summary += helper.green_msg('Demultiplexing (assign reads to cells): Yes\n', printit=False)
             pipeline_summary += helper.warning_msg(f"\t*NOTE:  {args.output_fastq} will be overwritten.",printit = False)
 
-        if not args.overwrite and output_exists:
+        elif not args.overwrite and output_exists:
             args.do_demultiplexing = False
             pipeline_summary += textwrap.dedent(
                 f"""
@@ -310,7 +310,7 @@ def update_pipeline_args(args):
                 pipeline_summary += helper.warning_msg(
                     f"\tWarning: some of these files are older than the whitelist {args.out_whitelist_fn}.\n"
                 )
-        if not args.out_whitelist_fn:
+        elif not args.out_whitelist_fn:
             args.do_demultiplexing = False
             pipeline_summary += textwrap.dedent(
                 f"""
@@ -320,7 +320,8 @@ def update_pipeline_args(args):
         else:
             args.do_demultiplexing = True
             pipeline_summary += helper.green_msg('Demultiplexing (assign reads to cells): Yes\n', printit=False)
-            pipeline_summary += f"\t*Barcode list for demultiplexing: {args.out_whitelist_fn}"
+            if args.known_bc_list:
+                pipeline_summary += f"\t*Barcode list for demultiplexing: {args.out_whitelist_fn}"
         
     pipeline_summary += "\n" + '#'*40 + "\n"
     return args, pipeline_summary

@@ -147,7 +147,7 @@ def bc_search_qc_report(pass_count, args):
     return print_message
 
 def get_bc_whitelist(raw_bc_count, full_bc_whitelist=None, exp_cells=None, 
-                    count_t=None, high_sensitivity_mode=False, 
+                    count_t=None,force_cell_n=None, high_sensitivity_mode=False, 
                     output_empty = True, empty_max_count = np.inf, 
                     out_plot_fn = DEFAULT_KNEE_PLOT_FN, args=None):
     f"""    
@@ -192,7 +192,9 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist=None, exp_cells=None,
         count_t = args.count_threshold
         high_sensitivity_mode = args.high_sensitivity_mode
         out_plot_fn = args.out_plot_fn
-
+        output_empty=args.out_emptydrop_fn
+        empty_max_count = args.empty_max_count
+        force_cell_n = args.force_cells
     # use the threshold function in config.py
     if high_sensitivity_mode:
         percentile_count_thres = high_sensitivity_threshold_calculation
@@ -220,10 +222,17 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist=None, exp_cells=None,
     raw_bc_count = {k:v for k,v in raw_bc_count.items() if k in whole_whitelist}
     
     # determine real bc based on the count threshold
+    if force_cell_n:
+        if force_cell_n > len(raw_bc_count):
+            logger.warning(helper.warning_msg(
+                f"force_cells ({force_cell_n}) is larger than the number of unique barcodes found in the data ({len(raw_bc_count)})."))
+            count_t = 0
+        # count threshold is the minimum count of the top N cells
+        else:
+            count_t = sorted(list(raw_bc_count.values()))[-force_cell_n]
     if count_t is not None:
         knee_plot(list(raw_bc_count.values()), count_t, out_plot_fn)
-        cells_bc = {k:v for k,v in raw_bc_count.items() if v > count_t}
-
+        cells_bc = {k:v for k,v in raw_bc_count.items() if v >= count_t}
         if not output_empty:
             return cells_bc, []
         else:
