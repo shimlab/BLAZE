@@ -13,7 +13,6 @@ Output:
 """
 from collections import defaultdict, Counter
 from tqdm import tqdm
-import multiprocessing as mp
 import textwrap
 import pandas as pd
 import numpy as np
@@ -25,12 +24,12 @@ import gzip
 from fast_edit_distance import edit_distance
 import logging
 
+
 from blaze.parser import parse_arg
 import blaze.helper as helper
 from blaze.config import *
 import blaze.polyT_adaptor_finder as polyT_adaptor_finder
 import blaze.read_assignment as read_assignment
-
 
 # setup logging
 LOG_FORMAT = \
@@ -135,7 +134,7 @@ def bc_search_qc_report(pass_count, args):
             {total_read:,}
         Reads with unambiguous polyT and adapter positions found:            
             {pass_count[0]+ pass_count[100]:,} ({(pass_count[0]+ pass_count[100])/total_read*100:.2f}% of all reads)
-            {pass_count[0]:,} in which all bases in the putative BC have Q>={args,minQ}
+            {pass_count[0]:,} in which all bases in the putative BC have Q>={args.minQ}
         Failed Reads: 
             no polyT and adapter positions found: 
                 {pass_count[1]:,} ({pass_count[1]/total_read*100:.2f}% of all reads)
@@ -143,7 +142,7 @@ def bc_search_qc_report(pass_count, args):
                 {pass_count[2]:,} ({pass_count[2]/total_read*100:.2f}% of all reads)
             multiple polyT and adapter found in one end
                 {pass_count[10]:,} ({pass_count[10]/total_read*100:.2f}% of all reads)
-        -------------------------------------------------------------------------------\n'
+        -------------------------------------------------------------------------------\n
         ''')
     return print_message
 
@@ -319,10 +318,16 @@ def print_logo(args):
         '''))
 
 def main():
-    args = parse_arg()
-    
     # Start running: Welcome logo
+    args = parse_arg()
     print_logo(args)
+
+    # TMP: print all the arguments in args
+    #for arg in vars(args):
+    #    print(f"{arg}: {getattr(args, arg)}")
+    
+    
+    
 
     ######################
     ###### Getting putative barcodes
@@ -346,17 +351,19 @@ def main():
             else:
                 rst_df.to_csv(args.out_raw_bc_fn, mode='a', index=False, header=False)
         
-        helper.green_msg(f'Putative barcode table saved in {args.out_raw_bc_fn}')
+        helper.green_msg(f'Putative barcode table saved in {args.out_raw_bc_fn}', printit=True)
         
         # ----------------------stats of the putative barcodes--------------------------
+
         add_summary(bc_search_qc_report(raw_bc_pass_count, args), 
-                    args, write_mode='w')
+                    args=args, write_mode='w')
 
     ######################
     ###### Whitelisting
     ######################
     if args.do_whitelisting:
         # get bc count dict (filtered by minQ)
+        dfs = pd.read_csv(args.out_raw_bc_fn, chunksize=1_000_000)
         raw_bc_count = Counter()
         for df in tqdm(dfs, desc = 'Counting high-quality putative BC', unit='M reads'):
             raw_bc_count += Counter(df[
@@ -372,17 +379,17 @@ def main():
             with open(args.out_emptydrop_fn, 'w') as f:
                 for k in ept_bc:
                     f.write(k+'\n')
-                helper.green_msg(f'Empty droplet barcode list saved as `{args.out_emptydrop_fn}`.')    
+                helper.green_msg(f'Empty droplet barcode list saved as `{args.out_emptydrop_fn}`.', printit=True)    
             # write to summary
             add_summary(f'\nIdentified # of cells: {len(bc_whitelist)}\n', args, write_mode='a')
 
         except Exception as e:
             logger.exception(e)
             helper.err_msg(
-                "Error: Failed to get whitelist. Please check the input files and settings."
+                "Error: Failed to get whitelist. Please check the input files and settings." , printit=True
                 )
         else:
-            helper.green_msg(f'Whitelist saved as `{args.out_whitelist_fn}`!')
+            helper.green_msg(f'Whitelist saved as `{args.out_whitelist_fn}`!', printit=True)
 
 
     ######################
@@ -391,7 +398,7 @@ def main():
     if args.do_demultiplexing:
         logger.info("Assigning reads to whitelist.\n")
         # write to fastq
-        demul_count_tot, count_tot = read_assignment.assign_read(args) 
+        demul_count_tot, count_tot = read_assignment.assign_read(args=args) 
         # write to summary
         add_summary(f'\nTotal reads: {count_tot}'
                     f'\nTotal reads in cells: {demul_count_tot} ({demul_count_tot/count_tot*100:.2f}%)', args, write_mode='a')

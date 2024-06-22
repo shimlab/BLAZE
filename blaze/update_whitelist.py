@@ -76,7 +76,7 @@ def parse_arg():
     args = parser.parse_args()
 
     if not args.expect_cells and not args.count_threshold:
-        helper.err_msg("Missing argument --expect-cells or --count-threshold.") 
+        helper.err_msg("Missing argument --expect-cells or --count-threshold.", printit=True) 
         sys.exit(1)
     if (args.expect_cells or args.high_sensitivity_mode) and args.count_threshold:
         helper.warning_msg(textwrap.dedent(
@@ -89,7 +89,7 @@ def parse_arg():
     
     args.kit_version = args.kit_version.lower()
     if args.kit_version not in ['v2', 'v3']:
-        helper.err_msg("Error: Invalid value of --kit-version, please choose from v3 or v2") 
+        helper.err_msg("Error: Invalid value of --kit-version, please choose from v3 or v2", printit=True) 
         sys.exit()
 
     if args.full_bc_whitelist:
@@ -146,7 +146,7 @@ def main(args):
             with open(DEFAULT_EMPTY_DROP_FN, 'w') as f:
                 for k in ept_bc:
                     f.write(k+'\n')
-    helper.green_msg(f'Whitelist saved as {args.out_bc_whitelist}.csv!')
+    helper.green_msg(f'Whitelist saved as {args.out_bc_whitelist}.csv!', printit = True)
 if __name__ == '__main__':
     args = parse_arg()
     #print(args)

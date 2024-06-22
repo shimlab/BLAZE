@@ -109,7 +109,7 @@ def batch_barcode_to_fastq(r_batches_with_idx, assignment_df ,gz = True):
         try:
             assert row.read_id == r.id            
         except AssertionError:
-            helper.err_msg("Different order in putative bc file and input fastq!")
+            helper.err_msg("Different order in putative bc file and input fastq!", printit = True)
             sys.exit()
 
         if not row.BC_corrected:
@@ -213,7 +213,7 @@ def _assign_read_batches(r_batch, whitelist, max_ed, gz):
         try:
             assert bc.read_id == r.id            
         except AssertionError:
-            helper.err_msg("Different order in putative bc file and input fastq!")
+            helper.err_msg("Different order in putative bc file and input fastq!", printit = True)
             sys.exit()
 
         if not bc.BC_corrected:
@@ -241,7 +241,7 @@ def _assign_read_batches(r_batch, whitelist, max_ed, gz):
     # logger.info(helper.green_msg(f"Successfully demultiplexed reads / Total reads: {sum(df.BC_corrected!='')} / {len(df.BC_corrected)}. ", printit = False))
 
 def assign_read(fastq_fns=None, fastq_out=None, putative_bc_csv=None, 
-                    whitelsit_csv,=None max_ed=None, n_process=None, gz=None,
+                    whitelsit_csv=None, max_ed=None, n_process=None, gz=None,
                     batchsize=None, args=None):
     """Main function: Demultiplex fastq files using putative barcode csv and whitelist csv
     """
@@ -262,6 +262,7 @@ def assign_read(fastq_fns=None, fastq_out=None, putative_bc_csv=None,
     
     # read the whitelist
     whitelist = [] 
+    print(whitelsit_csv)
     with open(whitelsit_csv, 'r') as f:
         for line in f:
             whitelist.append(line.split('-')[0].strip())

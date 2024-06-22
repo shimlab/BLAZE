@@ -8,7 +8,6 @@ from tqdm import tqdm
 import os
 import sys
 import shutil
-import time
 from collections import namedtuple
 
 
@@ -25,12 +24,15 @@ def reverse_complement(seq):
 		[comp[base] if base in comp.keys() else base for base in seq]
 	return ''.join(letters)[::-1]
 
-def err_msg(msg):
-	CRED = '\033[91m'
-	CEND = '\033[0m'
-	print(CRED + msg + CEND)	
-        
-def warning_msg(msg, printit = True):
+def err_msg(msg, printit = False):
+    CRED = '\033[91m'
+    CEND = '\033[0m'
+    if printit:
+        print(CRED + msg + CEND)
+    else:
+        return CRED + msg + CEND
+
+def warning_msg(msg, printit = False):
     CRED = '\033[93m'
     CEND = '\033[0m'
     if printit:
@@ -38,13 +40,19 @@ def warning_msg(msg, printit = True):
     else:
         return CRED + msg + CEND
 
-def green_msg(msg, printit = True):
+def green_msg(msg, printit = False):
     CRED = '\033[92m'
     CEND = '\033[0m'
     if printit:
         print(CRED + msg + CEND)
     else:
         return CRED + msg + CEND
+
+def bold_text(text, printit = False):
+    if printit:
+        print(f"\033[1m{text}\033[0m")
+    else:
+        return f"\033[1m{text}\033[0m"
 
 def sliding_window_sum(array, window) :
     cum = np.cumsum(array)  
@@ -257,7 +265,7 @@ def check_files_exist(file_list):
     for fn in file_list:
         if not os.path.exists(fn):
             exit_code = 1
-            err_msg(f'Error: can not find {fn}')
+            err_msg(f'Error: can not find {fn}', printit=True)
     if exit_code == 1:
         sys.exit(1)
     else:
