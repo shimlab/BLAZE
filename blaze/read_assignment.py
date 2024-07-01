@@ -32,12 +32,13 @@ class read_fastq:
         self.seq = sequence
         self.qscore = qscore
 
-def _match_bc_row(row, whitelist, max_ed):
+def _match_bc_row(row, whitelist, max_ed, minQ):
     """
     Args:
         row (row in pandas.DataFrame)
         whitelist (set): list of bc to assign to
         max_ed (int): maximum edit distance allowed for a assignment
+        minQ (int): minimum quality score of putative BC for read assignment
     Returns:
         1. assigned barcode <str>:  if a unambiguous barcode was found in the whitelist
             '': if no barcode was found in the whitelist
@@ -53,6 +54,9 @@ def _match_bc_row(row, whitelist, max_ed):
         strand = '+'
     else: 
         strand = '-'
+
+    if minQ and row.putative_bc_qscore < minQ:
+        return ['', '', '']
 
     if not row.putative_bc or row.putative_bc in whitelist:
         return [row.putative_bc, row.putative_umi, strand]
@@ -177,7 +181,7 @@ def _read_and_bc_batch_generator_with_idx(fastq_fns, putative_bc_csv, batch_size
     putative_bc_f.close()
 
     
-def _assign_read_batches(r_batch, whitelist, max_ed, gz):
+def _assign_read_batches(r_batch, whitelist, max_ed, gz, minQ=0):
     """Single-thread function:
         Assign all putative barcode to whiteliested barcode
 
@@ -187,6 +191,8 @@ def _assign_read_batches(r_batch, whitelist, max_ed, gz):
         whitelist (list): list of barcode 
         n_process (int): number of process 
         max_ed (int): maximum edit distance allowed for a assignment
+        gz (bool): output fastq is gzipped or not
+        minQ (int): minimum quality score for read assignment
 
     Returns:
         1. pd.dataframe: Same as the input csv, with an additional column called 'BC_corrected', 'putative_umi', 'strand'
@@ -202,7 +208,7 @@ def _assign_read_batches(r_batch, whitelist, max_ed, gz):
     
     new_cols = []
     for row in df.itertuples():
-        new_cols.append(_match_bc_row(row, whitelist, max_ed))
+        new_cols.append(_match_bc_row(row, whitelist, max_ed, minQ))
 
     df[['BC_corrected','putative_umi', 'strand']] = new_cols
     demul_read_count = sum(df.BC_corrected!='')
@@ -242,8 +248,18 @@ def _assign_read_batches(r_batch, whitelist, max_ed, gz):
 
 def assign_read(fastq_fns=None, fastq_out=None, putative_bc_csv=None, 
                     whitelsit_csv=None, max_ed=None, n_process=None, gz=None,
-                    batchsize=None, args=None):
+                    batchsize=None, minQ=0, args=None):
     """Main function: Demultiplex fastq files using putative barcode csv and whitelist csv
+        Input:
+            fastq_fns (list): list of fastq filenames
+            fastq_out (str): output fastq filename
+            putative_bc_csv (str): putative barcode csv filename
+            whitelsit_csv (str): whitelist csv filename
+            max_ed (int): maximum edit distance allowed for a assignment
+            n_process (int): number of process 
+            gz (bool): output fastq is gzipped or not
+            batchsize (int): batch size for read assignment
+            minQ (int): minimum quality score for read assignment (NOTE: the minQ specified in args is not used as that is for whitelisting)
     """
     # check input
     if args:
@@ -262,7 +278,6 @@ def assign_read(fastq_fns=None, fastq_out=None, putative_bc_csv=None,
     
     # read the whitelist
     whitelist = [] 
-    print(whitelsit_csv)
     with open(whitelsit_csv, 'r') as f:
         for line in f:
             whitelist.append(line.split('-')[0].strip())
