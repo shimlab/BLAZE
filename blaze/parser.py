@@ -269,11 +269,11 @@ def update_pipeline_args(args):
         else:
             args.do_whitelisting = True
             pipeline_summary += helper.green_msg('Generate the whitelist and knee plot: Yes\n', printit=False)
-            if args.force_cells is None:
+            if args.force_cells is not None:
                 pipeline_summary += f"\t*Forced number of cells: {args.force_cells}\n"
                 args.count_threshold = None
                 args.expect_cells = None
-            elif args.count_threshold is None:
+            elif args.count_threshold is not None:
                 args.expect_cells = None
 
             
