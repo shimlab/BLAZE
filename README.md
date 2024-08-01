@@ -101,6 +101,16 @@ Run BLAZE in high-sensitivity mode: the expected number of cells is set to be 10
 blaze --high-sensitivity-mode --expect-cells=1000 --threads=12 path/to/fastq_pass
 ```
 
+### Include ambient mRNA
+If you run BLAZE with `--count-threshold 0` and no value for `--expect-cells`, it'll assign barcodes to the reads where it can find them and output these in matched_reads.fastq.gz regardless of the reads being considered true cells or ambient mRNA.
+
+## **Example code:**
+
+Run BLAZE in default mode: the expected number of cells is set to be 1000 and run with 12 threads
+```
+blaze --count-threshold=0 --threads=12 path/to/fastq_pass
+```
+
 ## Rerun blaze or update previous run(s)
 By default, BLAZE reuses existing files if they exist. For example, if you need to change some settings and rerun BLAZE after running:  
 
