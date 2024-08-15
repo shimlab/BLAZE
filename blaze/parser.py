@@ -100,12 +100,12 @@ def parse_arg():
     whitelist_arg_opt.add_argument('--max-edit-distance', type=int, default=DEFAULT_ASSIGNMENT_ED,
         help='Maximum edit distance allowed between a putative barcode and a barcode \nfor a read to be assigned to the barcode.')                    
 
-    whitelist_arg_opt.add_argument('--10x-kit-version', dest="kit_version", choices=['v2', 'v3'], default=DEFAULT_GRB_KIT,
-        help='Choose from 10X Single Cell 3ʹ gene expression v2 or v3. If using other protocols, \n'
+    whitelist_arg_opt.add_argument('--10x-kit-version', '--kit-version', dest="kit_version", choices=['3v4', '3v3', '3v2', '5v3', '5v2'], default=DEFAULT_GRB_KIT,
+        help='Choose from 10X Single Cell 3ʹ gene expression v4, v3, v2 (3v4, 3v3, 3v2) or 5ʹ gene expression v3, v2 (5v3, 5v2). If using other protocols, \n'
             'please do not specify this option and specify --full-bc-whitelist instead.') 
 
     whitelist_arg_opt.add_argument('--full-bc-whitelist', 
-        type=lambda x: x if helper.check_files_exist(fastq_dir) else None, 
+        type=lambda x: x if helper.check_files_exist(x) else None, 
         default=None,
         help='Filename of the full barcode whitelist. If not specified, the corresponding version of 10X whitelist will be used.')
     whitelist_arg_opt.add_argument('--high-sensitivity-mode', action='store_true', 
@@ -172,9 +172,13 @@ def parse_arg():
         helper.warning_msg(textwrap.dedent(
             f'You are using {os.path.basename(args.full_bc_whitelist)} as the full barcode '\
             'whitelist. Note that the barcodes not listed in the file will never be found.'))
-    elif args.kit_version == 'v3':
-        args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_V3
-    elif args.kit_version == 'v2':
+    elif args.kit_version == '3v4':
+        args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_3V4
+    elif args.kit_version == '3v3':
+        args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_3V3
+    elif args.kit_version == '5v3':
+        args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_5V3
+    elif args.kit_version == '5v2' or args.kit_version == '3v2':
         args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_V2
     else:
         helper.err_msg("Error: Invalid value of --kit-version, please choose from v3 or v2 or specify --full-bc-whitelist.", printit=True) 

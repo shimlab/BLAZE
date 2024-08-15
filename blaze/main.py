@@ -39,7 +39,8 @@ logging.basicConfig(format=LOG_FORMAT, datefmt=DATE_FORMATE)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-def get_raw_bc_from_reads(reads, min_q=0):
+# Parse fastq -> polyT_adaptor_finder.Read class
+def get_raw_bc_from_reads(reads, min_q=0, kit=None):
     """
     Get putative BC from each reads from a batch of read (can be defined by batch_iterator function)
 
@@ -72,7 +73,8 @@ def get_raw_bc_from_reads(reads, min_q=0):
         
         # create read object 
         read = polyT_adaptor_finder.Read(read_id = r.id, sequence=str(r.seq), 
-                    phred_score=r.q_letter)    
+                    phred_score=r.q_letter, kit=kit)    
+        
 
         read.get_strand_and_raw_bc()
         read_ids.append(read.id)
@@ -335,19 +337,18 @@ def main():
     #for arg in vars(args):
     #    print(f"{arg}: {getattr(args, arg)}")
     
-    
-    
-
     ######################
     ###### Getting putative barcodes
     ######################
     if args.do_bc_search:
         logger.info(f'Getting putative barcodes from {len(args.fastq_fns)} FASTQ files...')
         read_batchs = read_batch_generator(args.fastq_fns, batch_size=args.batch_size)
-    
+
+            
         rst_futures = helper.multiprocessing_submit(get_raw_bc_from_reads,
                                                 read_batchs, n_process=args.threads, 
-                                                min_q=args.minQ)
+                                                min_q=args.minQ, kit=args.kit_version)
+    
 
         raw_bc_pass_count = defaultdict(int)
 

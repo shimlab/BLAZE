@@ -13,24 +13,30 @@ ADPT_SEQ='CTTCCGATCT' #searched adaptor sequence
 ADPT_WIN=200 #search adaptor in subsequence from both end of the reads with this size
 ADPT_MAC_MATCH_ED=2 #minimum proportion of match required when searching
 
+## format suffix
+SEQ_SUFFIX_WIN=200  #search poly T/ TSO in subsequence from both end of the reads with this size
+SEQ_SUFFIX_MIN_MATCH_PROP=1 #minimum proportion of match required when searching for poly T/TSO
+SEQ_SUFFIX_AFT_ADPT=(20,50) #a poly T / TSO should locate within this range downstream an adaptor
+
 ## poly T searching
 PLY_T_LEN=4 #length of searched poly T
-PLY_T_WIN=200 #search poly T in subsequence from both end of the reads with this size
-PLY_T_MIN_MATCH_PROP=1#minimum proportion of match required when searching
-PLY_T_NT_AFT_ADPT=(20,50)#a poly T should locate within this range downstream an adaptor
+## TSO searching
+TSO_SEQ='TTTCTTATATGGG'
 
 ####################################################
 #######    DEFAULT in getting putative bc     ######
 ####################################################
 # input
 DEFAULT_GRB_MIN_SCORE=15
-DEFAULT_GRB_KIT='v3'
-DEFAULT_UMI_SIZE = 12 if DEFAULT_GRB_KIT=='v3' else 10
+DEFAULT_GRB_KIT='3v3'
+DEFAULT_UMI_SIZE = 12 if DEFAULT_GRB_KIT=='3v3' else 10
 DEFAULT_BC_SIZE = 16
 
 # The 10X barcode whitelists has been packed in the package
-DEFAULT_GRB_WHITELIST_V3=os.path.join(os.path.dirname(__file__), '10X_bc', '3M-february-2018.zip')
+DEFAULT_GRB_WHITELIST_3V3=os.path.join(os.path.dirname(__file__), '10X_bc', '3M-february-2018.zip')
 DEFAULT_GRB_WHITELIST_V2=os.path.join(os.path.dirname(__file__), '10X_bc', '737K-august-2016.txt')
+DEFAULT_GRB_WHITELIST_5V3=os.path.join(os.path.dirname(__file__), '10X_bc', '3M-5pgex-jan-2023.zip')
+DEFAULT_GRB_WHITELIST_3V4=os.path.join(os.path.dirname(__file__), '10X_bc', '3M-3pgex-may-2023.zip')
 
 #output
 DEFAULT_GRB_OUT_RAW_BC='putative_bc.csv'

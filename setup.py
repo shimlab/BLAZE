@@ -13,7 +13,7 @@ setup(
     test_suite='test',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    package_data={'blaze': ['10X_bc/3M-february-2018.zip', '10X_bc/737K-august-2016.txt']},
+    package_data={'blaze': ['10X_bc/3M-february-2018.zip', '10X_bc/737K-august-2016.txt', '10X_bc/3M-5pgex-jan-2023.zip', "10X_bc/3M-3pgex-may-2023.zip"]},
     url="https://github.com/shimlab/BLAZE",
     install_requires=["fast-edit-distance==1.2.1", 
                     'matplotlib', 
