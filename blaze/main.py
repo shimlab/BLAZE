@@ -88,8 +88,8 @@ def parse_arg(argv):
                     Maximum edit distance allowed between a putative barcode and a barcode 
                     for a read/putative barcdoe to be assigned to the barcode. Default: --max-edit-distance {DEFAULT_ASSIGNMENT_ED}
                 
-                --kit-version <3v2 or 3v3 or 5v3>:
-                    Choose from 10X Single Cell 3ʹ gene expression v2 or v3 or 5' gene expression. If using other
+                --kit-version <3v2 3v3 5v2 or 5v3>:
+                    Choose from 10X Single Cell 3ʹ gene expression v2 or v3 or 5' gene expression v2 or v3. If using other
                     protocols, please do not specify this option and specify --full-bc-whitelist instead. By default, 
                     `--kit_version v3`  will be used if --full-bc-whitelist is not specified.
 
@@ -223,9 +223,9 @@ def parse_arg(argv):
     out_plot_fn = prefix + DEFAULT_KNEE_PLOT_FN
     summary_fn = prefix + DEFAULT_BC_STAT_FN
 
-    if kit not in ['3v2', '3v3', '5v3']:
+    if kit not in ['3v2', '3v3', '5v2', '5v3']:
         helper.err_msg("Error: Invalid value of --kit-version (" + kit + "), please choose from 3v3 or 3v2 or 5v3") 
-        sys.exit()
+        sys.exit()  
 
     if full_bc_whitelist:
         helper.warning_msg(textwrap.dedent(
@@ -233,9 +233,11 @@ def parse_arg(argv):
             'whitelist. Note that the barcodes not listed in the file will never be found.'))
     else:
         if kit == '3v3':
-            full_bc_whitelist = DEFAULT_GRB_WHITELIST_V3
-        elif kit == '3v2' or kit == '5v3':
+            full_bc_whitelist = DEFAULT_GRB_WHITELIST_3V3
+        elif kit == '3v2' or kit == '5v2':
             full_bc_whitelist = DEFAULT_GRB_WHITELIST_V2
+        elif kit == '5v3':
+            full_bc_whitelist = DEFAULT_GRB_WHITELIST_5V3
 
     # Read from args
     if not args:
@@ -735,7 +737,7 @@ def main(argv=None):
         logger.info(helper.warning_msg(
             f"NOTE: The `{out_fastq_fn}` exists and has NOT been updated.", printit = False))
 
-        if os.path.getmtime(out_fastq_fn) < os.path.getmtime(out_whitelist_fn):
+        if  os.path.exists(out_fastq_fn) and os.path.getmtime(out_fastq_fn) < os.path.getmtime(out_whitelist_fn):
             logger.info(helper.warning_msg(
             f"Warning: the existing `{out_fastq_fn}` is older than the upstream output {out_whitelist_fn}."
             f"If it needs to be re-generated. Please remove/rename the existing `{out_fastq_fn}` and re-run BLAZE "
