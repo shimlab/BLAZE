@@ -29,7 +29,7 @@ TSO_SEQ='TTTCTTATATGGG'
 # input
 DEFAULT_GRB_MIN_SCORE=15
 DEFAULT_GRB_KIT='3v3'
-DEFAULT_UMI_SIZE = 12 if DEFAULT_GRB_KIT=='3v3' else 10
+DEFAULT_UMI_SIZE = 10 if DEFAULT_GRB_KIT in ['3v2', '5v2'] else 12
 DEFAULT_BC_SIZE = 16
 
 # The 10X barcode whitelists has been packed in the package
