@@ -293,9 +293,9 @@ class Read(object):
         if not self._strand:
             return None
         elif self._strand == '+':
-            return int(-self.raw_bc_start-DEFAULT_BC_SIZE-DEFAULT_UMI_SIZE)
+            return int(-self.raw_bc_start-DEFAULT_BC_SIZE-self.umi_len)
         else: 
-            return int(self.raw_bc_start+DEFAULT_BC_SIZE+DEFAULT_UMI_SIZE)
+            return int(self.raw_bc_start+DEFAULT_BC_SIZE+self.umi_len)
 
     @property
     def putative_UMI(self):
@@ -305,10 +305,10 @@ class Read(object):
             return None
         elif self._strand == '+':
             return helper.reverse_complement(
-                        self.seq)[self.raw_bc_start+DEFAULT_BC_SIZE: self.raw_bc_start+DEFAULT_BC_SIZE+DEFAULT_UMI_SIZE]
+                        self.seq)[self.raw_bc_start+DEFAULT_BC_SIZE: self.raw_bc_start+DEFAULT_BC_SIZE+self.umi_len]
         else: 
             return self.seq[
-                self.raw_bc_start+DEFAULT_BC_SIZE: self.raw_bc_start+DEFAULT_BC_SIZE+DEFAULT_UMI_SIZE]
+                self.raw_bc_start+DEFAULT_BC_SIZE: self.raw_bc_start+DEFAULT_BC_SIZE+self.umi_len]
     
     @property
     def pre_bc_flanking(self):
@@ -334,12 +334,12 @@ class Read(object):
             return None
         elif self._strand == '+':
             return helper.reverse_complement(
-                        self.seq)[self.raw_bc_start+DEFAULT_BC_SIZE+DEFAULT_UMI_SIZE: \
-                                  self.raw_bc_start+DEFAULT_BC_SIZE+DEFAULT_UMI_SIZE+ DEFAULT_GRB_FLANKING_SIZE]
+                        self.seq)[self.raw_bc_start+DEFAULT_BC_SIZE+self.umi_len: \
+                                  self.raw_bc_start+DEFAULT_BC_SIZE+self.umi_len+ DEFAULT_GRB_FLANKING_SIZE]
         else: 
             return self.seq[
-                self.raw_bc_start+DEFAULT_BC_SIZE+DEFAULT_UMI_SIZE: \
-                    self.raw_bc_start+DEFAULT_BC_SIZE+DEFAULT_UMI_SIZE+DEFAULT_GRB_FLANKING_SIZE]
+                self.raw_bc_start+DEFAULT_BC_SIZE+self.umi_len: \
+                    self.raw_bc_start+DEFAULT_BC_SIZE+self.umi_len+DEFAULT_GRB_FLANKING_SIZE]
     
     @property
     def polyT_trimming_idx(self):

@@ -99,11 +99,11 @@ def parse_arg():
         help='Minimum phred score for all bases in a putative BC to define a "high quality putative barcode".')
     whitelist_arg_opt.add_argument('--max-edit-distance', type=int, default=DEFAULT_ASSIGNMENT_ED,
         help='Maximum edit distance allowed between a putative barcode and a barcode \nfor a read to be assigned to the barcode.')                    
-
     whitelist_arg_opt.add_argument('--10x-kit-version', '--kit-version', dest="kit_version", choices=['3v4', '3v3', '3v2', '5v3', '5v2'], default=DEFAULT_GRB_KIT,
         help='Choose from 10X Single Cell 3ʹ gene expression v4, v3, v2 (3v4, 3v3, 3v2) or 5ʹ gene expression v3, v2 (5v3, 5v2). If using other protocols, \n'
-            'please do not specify this option and specify --full-bc-whitelist instead.') 
-
+            'please do not specify this option and specify --full-bc-whitelist and --umi-len instead.') 
+    whitelist_arg_opt.add_argument('--umi-len', dest="umi_len", type=int, default=DEFAULT_UMI_SIZE,
+        help='UMI length, will only be used when --kit-version is not specified.')
     whitelist_arg_opt.add_argument('--full-bc-whitelist', 
         type=lambda x: x if helper.check_files_exist(x) else None, 
         default=None,
@@ -174,12 +174,16 @@ def parse_arg():
             'whitelist. Note that the barcodes not listed in the file will never be found.'))
     elif args.kit_version == '3v4':
         args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_3V4
+        args.umi_len = DEFAULT_UMI_SIZE
     elif args.kit_version == '3v3':
         args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_3V3
+        args.umi_len = DEFAULT_UMI_SIZE
     elif args.kit_version == '5v3':
         args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_5V3
+        args.umi_len = DEFAULT_UMI_SIZE
     elif args.kit_version == '5v2' or args.kit_version == '3v2':
         args.full_bc_whitelist = DEFAULT_GRB_WHITELIST_V2
+        args.umi_len = V2_UMI_SIZE
     else:
         helper.err_msg("Error: Invalid value of --kit-version, please choose from v3 or v2 or specify --full-bc-whitelist.", printit=True) 
         sys.exit(1)

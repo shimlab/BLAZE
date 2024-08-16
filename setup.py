@@ -5,7 +5,7 @@ with open('README.md', 'r') as f:
 
 setup(
     name='blaze2',
-    version='2.4.0',
+    version='2.4.1',
     author='Yupei You',
     author_email="youyupei@gmail.com",
     description='Barcode identification from Long reads for AnalyZing single cell gene Expression',

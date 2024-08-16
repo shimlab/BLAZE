@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # Parse fastq -> polyT_adaptor_finder.Read class
-def get_raw_bc_from_reads(reads, min_q=0, kit=None):
+def get_raw_bc_from_reads(reads, min_q=0, kit=None, **kwargs):
     """
     Get putative BC from each reads from a batch of read (can be defined by batch_iterator function)
 
@@ -73,7 +73,7 @@ def get_raw_bc_from_reads(reads, min_q=0, kit=None):
         
         # create read object 
         read = polyT_adaptor_finder.Read(read_id = r.id, sequence=str(r.seq), 
-                    phred_score=r.q_letter, kit=kit)    
+                    phred_score=r.q_letter, kit=kit, **kwargs)    
         
 
         read.get_strand_and_raw_bc()
@@ -347,7 +347,8 @@ def main():
             
         rst_futures = helper.multiprocessing_submit(get_raw_bc_from_reads,
                                                 read_batchs, n_process=args.threads, 
-                                                min_q=args.minQ, kit=args.kit_version)
+                                                min_q=args.minQ, kit=args.kit_version,
+                                                umi_len=args.umi_len)
     
 
         raw_bc_pass_count = defaultdict(int)
