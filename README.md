@@ -19,8 +19,9 @@ Combining single-cell RNA sequencing with Nanopore long-read sequencing enables 
 ## Major updates
 * **Add a final step to perform the read-to-whitelist assignment:** A putative barcode (16nt) will first be extended to include flanking bases from both sides. Then we scan through the whitelist and find the one with the lowest subsequence edit distance (ED: defined as the minimum edits required to make a shorter sequence a subsequence of the longer one).
 * **Identifies the putative UMI sequences for each read** The end position of the barcode, which is also the start position of the UMI sequence, will be corrected by taking into account the insertion and deletion errors in the putative barcode. The 10 (for 10x v2 kit) or 12nt (for 10x v3 kit) sequence immediately downstream will be used as UMI.
-* **Trim the bases before and included in UMI from the demultiplexed reads:** The output format will be in fastq or fastq.gz. The header with be `@<16 nt BC>_<12 nt UMI>#read_id_<strand>`
 * **Significant runtime improvement** (~5-10 times faster)
+* **Trim the bases before and included in UMI from the demultiplexed reads:** From version 2.2, The output format will be in fastq or fastq.gz. The header with be `@<16 nt BC>_<12 nt UMI>#read_id_<strand>`
+* **Adding more supported 10X kit.**  From version 2.4, BLAZE can take '3v4', '3v3'(default), '3v2', '3v1' for 10X 3' GEX kit v4 to v2 respectively, and '5v3', '5v2' for 10X 5' GEX kit v3 and v2
 
 ## Minor updates
 * `--emptydrop` option in v1.x is on by default and is no longer user-specified.
