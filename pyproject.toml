@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blaze2"
+dynamic = ["version"]
+authors = [
+    { name = "Yupei You", email = "youyupei@gmail.com" }
+]
+description = "Barcode identification from Long reads for AnalyZing single cell gene Expression"
+readme = "README.md"
+urls = { Source = "https://github.com/shimlab/BLAZE" }
+license = { text = "GNU General Public License v3 (GPLv3)" }
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "fast-edit-distance==1.2.1",
+    "matplotlib",
+    "tqdm",
+    "numpy",
+    "pandas",
+]
+
+[tool.setuptools]
+packages = ["blaze"]  # You can also use find_packages if you have a specific package structure.
+
+[tool.setuptools.package-data]
+blaze = [
+    "10X_bc/3M-february-2018.zip",
+    "10X_bc/737K-august-2016.txt",
+    "10X_bc/3M-5pgex-jan-2023.zip",
+    "10X_bc/3M-3pgex-may-2023.zip"
+]
+
+[project.scripts]
+blaze = "blaze:_pipeline"
+
+[tool.setuptools_scm]
