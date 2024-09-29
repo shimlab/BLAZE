@@ -116,12 +116,14 @@ def parse_arg():
 
     # Demultiplexing argument
     demux_option_opt = parser.add_argument_group(helper.bold_text("Demultiplexing options"))
-    
     demux_option_opt.add_argument('--no-demultiplexing', action='store_false', dest='do_demultiplexing',
         help='Do not perform the demultiplexing step.')
     demux_option_opt.add_argument('--known-bc-list', type=existing_file, default=None,
         help='A file specifies a list of barcodes for demultiplexing. If not specified, the barcodes will be assigned to the whitelist from the whitelisting step.')
-
+    demux_option_opt.add_argument('--restrand-fastq', dest="restrand", type=bool, default=True,
+        help='Re-strand all reads to transcript strand: \n'
+        'reads from the reverse strand (those with ployT instead of polyA) will be reverse complemented \n'
+        'the their quality scores will be reversed')
     ###############################
     ####### checking the argument:
     ###############################

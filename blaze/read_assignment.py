@@ -44,16 +44,16 @@ def _match_bc_row(row, whitelist, max_ed, minQ):
             '': if no barcode was found in the whitelist
             'ambiguous': if multiple barcode was found in the whitelist
         2. adjusted putative_umi
-        3. strand '+' for read with positive strand (start with BC,umi,polyT...), 
-                  '-' for read with negative strand
+        3. strand '+' for read with transcript strand (End with polyA)
+                  '-' for read with negative strand (start with BC,umi,polyT...)
 
     """
     if not row.polyT_end:
         strand = ''
     elif row.polyT_end > 0:
-        strand = '+'
-    else: 
         strand = '-'
+    else: 
+        strand = '+'
 
     if minQ and row.putative_bc_qscore < minQ:
         return ['', '', '']
@@ -181,7 +181,7 @@ def _read_and_bc_batch_generator_with_idx(fastq_fns, putative_bc_csv, batch_size
     putative_bc_f.close()
 
     
-def _assign_read_batches(r_batch, whitelist, max_ed, gz, minQ=0):
+def _assign_read_batches(r_batch, whitelist, max_ed, gz, restrand ,minQ=0):
     """Single-thread function:
         Assign all putative barcode to whiteliested barcode
 
@@ -231,11 +231,15 @@ def _assign_read_batches(r_batch, whitelist, max_ed, gz, minQ=0):
             seq = r.seq[int(bc.polyT_end):]
             qscore = r.qscore[int(bc.polyT_end):]
         
+        if restrand and bc.strand == '-':
+            seq = helper.reverse_complement(seq)
+            qscore = qscore[::-1]
+        
+        # write to fastq
         out_buffer += f"@{bc.BC_corrected}_{bc.putative_umi}#{bc.read_id}_{bc.strand}\tCB:Z:{bc.BC_corrected}\tUB:Z:{bc.putative_umi}\n"
-        out_buffer += str(seq) + '\n'
+        out_buffer += str(seq) + '\n' 
         out_buffer += '+\n'
         out_buffer += qscore + '\n'
-
     
     if gz:
         b_out_buffer = gzip.compress(out_buffer.encode('utf-8'))
@@ -248,7 +252,7 @@ def _assign_read_batches(r_batch, whitelist, max_ed, gz, minQ=0):
 
 def assign_read(fastq_fns=None, fastq_out=None, putative_bc_csv=None, 
                     whitelsit_csv=None, max_ed=None, n_process=None,
-                    batchsize=None, minQ=0, args=None):
+                    batchsize=None, minQ=0, restrand=True, args=None):
     """Main function: Demultiplex fastq files using putative barcode csv and whitelist csv
         Input:
             fastq_fns (list): list of fastq filenames
@@ -270,6 +274,7 @@ def assign_read(fastq_fns=None, fastq_out=None, putative_bc_csv=None,
         max_ed = args.max_edit_distance
         n_process = args.threads
         batchsize = args.batch_size
+        restrand = args.restrand
 
     gz = fastq_out.endswith('.gz')
 
@@ -291,7 +296,7 @@ def assign_read(fastq_fns=None, fastq_out=None, putative_bc_csv=None,
         with open(fastq_out, 'wb') as output_handle:
             pbar = tqdm(unit="Reads", desc='Processed')
             for r_batch in r_batches:
-                _, b_fast_str, demul_count, read_count = _assign_read_batches(r_batch, whitelist, max_ed,  gz)
+                _, b_fast_str, demul_count, read_count = _assign_read_batches(r_batch, whitelist, max_ed,  gz, restrand)
                 demul_count_tot += demul_count
                 count_tot += read_count
                 output_handle.write(b_fast_str)
@@ -308,7 +313,8 @@ def assign_read(fastq_fns=None, fastq_out=None, putative_bc_csv=None,
                             pbar_func=lambda x: len(x[0]),
                             whitelist = whitelist,
                             max_ed = max_ed,
-                            gz = gz)
+                            gz = gz,
+                            restrand = restrand)
         
         # collect results
         demul_count_tot = 0
