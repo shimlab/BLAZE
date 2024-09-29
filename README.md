@@ -15,21 +15,33 @@ Oxford Nanopore sequencing, Demultiplexing, Single Cell, Barcode.
 # Overview
 Combining single-cell RNA sequencing with Nanopore long-read sequencing enables isoform-level analysis in single cells. However, due to the higher error rate in Nanopore reads, the demultiplexing of cell barcodes and Unique molecular Identifiers (UMIs) can be challenging. This tool enables the accurate identification of barcodes and UMIs solely from Nanopore reads. The output of BLAZE is a barcode whitelist and a fastq of demultiplexed reads with barcodes and UMIs identified,  which can be utilised by downstream tools such as FLAMES to quantify genes and isoforms in single cells. For a detailed description of how BLAZE works and its performance across different datasets, please see our [Genome Biology paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-023-02907-y).
 
-# Version 2.x Update vs. Version 1.x
-## Major updates
-* **Add a final step to perform the read-to-whitelist assignment:** A putative barcode (16nt) will first be extended to include flanking bases from both sides. Then we scan through the whitelist and find the one with the lowest subsequence edit distance (ED: defined as the minimum edits required to make a shorter sequence a subsequence of the longer one).
-* **Identifies the putative UMI sequences for each read** The end position of the barcode, which is also the start position of the UMI sequence, will be corrected by taking into account the insertion and deletion errors in the putative barcode. The 10 (for 10x v2 kit) or 12nt (for 10x v3 kit) sequence immediately downstream will be used as UMI.
-* **Significant runtime improvement** (~5-10 times faster)
-* **Trim the bases before and included in UMI from the demultiplexed reads:** From version 2.2, The output format will be in fastq or fastq.gz. The header with be `@<16 nt BC>_<12 nt UMI>#read_id_<strand>`
-* **Adding more supported 10X kit.**  From version 2.4, The option ` --10x-kit-version` (or ` --kit-version`) can take '3v4', '3v3'(default), '3v2', '3v1' for 10X 3' GEX kit v4 to v2 respectively, and '5v3', '5v2' for 10X 5' GEX kit v3 and v2
+# What’s New
 
-## Minor updates
-* `--emptydrop` option in v1.x is on by default and is no longer user-specified.
-* Add more information to the putative barcode table:
-    * putative UMI
-    * UMI end position (used for later trimming the adaptor-UMI sequence from each read) (v2.1)
-    * PolyT end position (used for later trimming the adaptor-UMI-polyT sequence from each read) (from v2.2)
-    * Flanking bases before barcode and after UMI (for correction of insertion and deletion within the putative barcode and UMIs)
+## Feature added
+* v2.0: 
+    * **Add a final step to perform the read-to-whitelist assignment:** A putative barcode (16nt) will first be extended to include flanking bases from both sides. Then we scan through the whitelist and find the one with the lowest subsequence edit distance (ED: defined as the minimum edits required to make a shorter sequence a subsequence of the longer one).
+    * **Identifies the putative UMI sequences for each read** The end position of the barcode, which is also the start position of the UMI sequence, will be corrected by taking into account the insertion and deletion errors in the putative barcode. The 10 (for 10x v2 kit) or 12nt (for 10x v3 kit) sequence immediately downstream will be used as UMI.
+    * **Significant runtime improvement** (~5-10 times faster)
+
+    * **Add more information to the putative barcode table:**
+        * Putative UMI
+        * Flanking bases before barcode and after UMI (for correction of insertion and deletion within the putative barcode and UMIs)
+* v2.2:
+    * **Trim the bases before and included in UMI from the demultiplexed reads:** The output format will be in fastq or fastq.gz. The header with be `@<16 nt BC>_<12 nt UMI>#read_id_<strand>`
+    * Add more information to the putative barcode table:
+        * UMI end position (used for later trimming the adaptor-UMI sequence from each read)
+* v2.4
+    * **Adding more supported 10X kit.**  The option ` --10x-kit-version` (or ` --kit-version`) can take '3v4', '3v3'(default), '3v2', '3v1' for 10X 3' GEX kit v4 to v2 respectively, and '5v3', '5v2' for 10X 5' GEX kit v3 and v2
+* v2.5
+    * **Restrand the final demultiplexed reads into the transcript strand.** This can be turned off by add `--no-restrand`.
+## Changes
+
+* From v2.0:     
+    * `--emptydrop` option in v1.x is on by default and is no longer user-specified.
+* From v2.5:
+    * New read name format in the demultiplexed FASTQ: `@<barcode>_<UMI>_<original read id>_<strand ('+' or '-')  CB:Z:<barcode>  UB:Z:<UMI>`. The `CB` and `UB` tag can be pass to the bam file if using minimap2 with option `-y`.
+    * In the final demultiplexed FASTQ, the strand definition has been updated: ‘+’ now represents the transcript strand, while the previous definition associated it with the strand with forward sequence of the cell barcode, which is the reverse strand of the transcript.
+
 # Installation
 `pip3 install blaze2`
 
@@ -82,9 +94,9 @@ Finally, BLAZE generates a cell-associated barcode list by picking unique barcod
 **Step 3: Assign reads to the barcodes.**
 With the barcode list generated in step 2, BLAZE assigns reads to cells by comparing the putative barcodes with the barcode list and finding the closest match. Specifically, for each read, the putative barcode has been identified in step 1. Among the barcode list, BLAZE identifies the barcode with the lowest ED from the read. Note that the reads would not be assigned if 1. the lowest ED is larger than a threshold (Default: 2). 2. Multiple barcodes in the list have an equal lowest ED. If a read barcode is successfully assigned to a barcode, the UMI sequence will be also adjusted for the INDEL error in the putative barcode. 
 
-* Output 5: fastq files with modified read name: @\<barcode>\_\<UMI>\_\<original read id>_<strand ('+' or '-')>. For strand, '+' means the barcode identified from the forward strand of the read and '-' means the reverse strand. 
+* Output 5: fastq files with modified read name: `@<barcode>_<UMI>_<original read id>_<strand ('+' or '-')  CB:Z:<barcode>  UB:Z:<UMI>`. The `CB` and `UB` tag can be pass to the bam file if using minimap2 with option `-y`. For strand, '+' means the read came from the transcript strand and '-' means the reverse strand. 
 
-Note: the output fastq can be directly used in [FLAMES](https://github.com/OliverVoogd/FLAMES) for downstream steps.
+Note: the output fastq can be directly used in [FLAMES](https://github.com/mritchielab/FLAMES) for downstream steps.
 
 ## Additional (optional) features
 
