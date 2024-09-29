@@ -126,7 +126,7 @@ def batch_barcode_to_fastq(r_batches_with_idx, assignment_df ,gz = True):
             seq = r.seq[int(row.polyT_end):]
             qscore = r.qscore[int(row.polyT_end):]
         
-        out_buffer += f"@{row.BC_corrected}_{row.putative_umi}#{row.read_id}_{row.strand}\n"
+        out_buffer += f"@{row.BC_corrected}_{row.putative_umi}#{row.read_id}_{row.strand}\tCB:Z:{row.BC_corrected}\tUB:Z:{row.putative_umi}\n"
         out_buffer += str(seq) + '\n'
         out_buffer += '+\n'
         out_buffer += qscore + '\n'
@@ -231,7 +231,7 @@ def _assign_read_batches(r_batch, whitelist, max_ed, gz, minQ=0):
             seq = r.seq[int(bc.polyT_end):]
             qscore = r.qscore[int(bc.polyT_end):]
         
-        out_buffer += f"@{bc.BC_corrected}_{bc.putative_umi}#{bc.read_id}_{bc.strand}\n"
+        out_buffer += f"@{bc.BC_corrected}_{bc.putative_umi}#{bc.read_id}_{bc.strand}\tCB:Z:{bc.BC_corrected}\tUB:Z:{bc.putative_umi}\n"
         out_buffer += str(seq) + '\n'
         out_buffer += '+\n'
         out_buffer += qscore + '\n'
