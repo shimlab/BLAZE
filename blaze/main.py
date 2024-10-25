@@ -328,9 +328,9 @@ def print_logo(args):
                 {BLAZE_LOGO}
         '''))
 
-def main():
+def main(args_string=None):
     # Start running: Welcome logo
-    args = parse_arg()
+    args = parse_arg(args_string)
     print_logo(args)
 
     # TMP: print all the arguments in args
