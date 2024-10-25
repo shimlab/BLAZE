@@ -16,7 +16,7 @@ logging.basicConfig(format=LOG_FORMAT, datefmt=DATE_FORMATE)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-def parse_arg():
+def parse_arg(arg_string=None):
     parser = argparse.ArgumentParser(
     description=textwrap.dedent(helper.bold_text(
     '''BLAZE2 is a tool for demultiplexing 10X single cell long-read RNA-seq data. It takes fastq files as 
@@ -127,8 +127,10 @@ def parse_arg():
     ###############################
     ####### checking the argument:
     ###############################
-
-    args = parser.parse_args()
+    if arg_string is None:
+        args = parser.parse_args()
+    else:
+        args = parser.parse_args(arg_string.split())
 
     # config the output filenames
     args.output_fastq = args.output_prefix + args.output_fastq
