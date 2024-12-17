@@ -112,7 +112,8 @@ def parse_arg(arg_string=None):
         help='Turn on the sensitivity mode, which increases the sensitivity of barcode \n'
             'detections but potentially increase the number false/uninformative BC in \n'
             'the whitelist. Identification of empty droplets are recommended in downstream\n')
-
+    whitelist_arg_opt.add_argument('--no-emtpy-drops', action='store_false', dest='do_empty_drops_output',
+        help='Skip the empty droplets table output. \n')
 
     # Demultiplexing argument
     demux_option_opt = parser.add_argument_group(helper.bold_text("Demultiplexing options"))

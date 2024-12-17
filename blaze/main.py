@@ -197,6 +197,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist=None, exp_cells=None,
         output_empty=args.out_emptydrop_fn
         empty_max_count = args.empty_max_count
         force_cell_n = args.force_cells
+        output_empty = args.do_empty_drops_output
     # use the threshold function in config.py
     if high_sensitivity_mode:
         percentile_count_thres = high_sensitivity_threshold_calculation
