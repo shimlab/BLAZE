@@ -32,7 +32,7 @@ Combining single-cell RNA sequencing with Nanopore long-read sequencing enables 
         * UMI end position (used for later trimming the adaptor-UMI sequence from each read)
 * v2.4
     * **Adding more supported 10X kit.**  The option ` --10x-kit-version` (or ` --kit-version`) can take '3v4', '3v3'(default), '3v2', '3v1' for 10X 3' GEX kit v4 to v2 respectively, and '5v3', '5v2' for 10X 5' GEX kit v3 and v2
-* v2.
+* v2.5
     * **Restrand the final demultiplexed reads into the transcript strand.** This can be turned off by add `--no-restrand`.
 ## Changes
 
