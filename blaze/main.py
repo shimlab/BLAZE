@@ -156,13 +156,13 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist=None, exp_cells=None,
     Get a whitelist from all putative cell bc with high-confidence putative bc counts. 
     If the expect number is provided (default), a quantile-based threshold will be 
     calculated to determine the exact cells to be output. Otherwise, a user-specified 
-    ount threshold will be used and the cells/Barocdes with counts above the threshold will be output.
+    count threshold will be used and the cells/Barcodes with counts above the threshold will be output.
     
     If high_sensitivity_mode = True, the high sensitivity (HS) mode is turned on which uses
     more relaxed threshold  
 
     If in output_empty=True, a list of BCs that are most likely corresponding to 
-    empty droplets will also be produced autimatically , which might be useful in 
+    empty droplets will also be produced automatically , which might be useful in 
     downstream analysis.
         Criteria of selecting these BC:
             1. BC in 10x full whitelist, and
@@ -239,7 +239,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist=None, exp_cells=None,
             return cells_bc, []
         else:
             # create a confident list of empty drops in high sensitivity mode
-            logger.info("Creating emtpy droplets barocde list...")
+            logger.info("Creating emtpy droplets barcode list...")
             ept_bc = []
             ept_bc_max_count = min(cells_bc.values())
             ept_bc_max_count = min(ept_bc_max_count, empty_max_count)
@@ -264,7 +264,7 @@ def get_bc_whitelist(raw_bc_count, full_bc_whitelist=None, exp_cells=None,
             return cells_bc, []
         else:
             # create a confident list of empty drops in high sensitivity mode
-            logger.info("Creating emtpy droplets barocde list...")
+            logger.info("Creating emtpy droplets barcode list...")
             ept_bc = []
             ept_bc_max_count = min(cells_bc.values())
             ept_bc_max_count = min(ept_bc_max_count, empty_max_count)
@@ -287,7 +287,7 @@ def knee_plot(counts, threshold=None, out_fn = 'knee_plot.png'):
     Plot knee plot using the high-confidence putative BC counts
 
     Args:
-        counts (list): high-confidence putative BC countstion_
+        counts (list): high-confidence putative BC counts
         threshold (int, optional): a line to show the count threshold. Defaults to None.
     """
     counts = sorted(counts)[::-1]
