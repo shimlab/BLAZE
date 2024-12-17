@@ -61,7 +61,7 @@ def high_sensitivity_threshold_calculation(count_array, exp_cells):
 DEFAULT_EMPTY_DROP_FN = 'emtpy_bc_list.csv'
 DEFAULT_KNEE_PLOT_FN = 'knee_plot.png'
 DEFAULT_BC_STAT_FN = "summary.txt"
-DEFAULT_EMPTY_DROP_MIN_ED = 5 # minimum edit distance from emtpy drop BC to selected BC
+DEFAULT_EMPTY_DROP_MIN_ED = 5 # minimum edit distance from empty drop BC to selected BC
 DEFAULT_EMPTY_DROP_NUM = 2000 # number of BC in the output
     
 
